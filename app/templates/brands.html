@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selección por Grupos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brands.css') }}">
+  <style>
+    /* Estilos base para evitar FOUC */
+    .brands-group {
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+    .brands-group.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Selecciona tu marca favorita</h1>
+    <p class="group-indicator">Grupo <span id="current-group">1</span>/4</p>
+    
+    <div class="groups-container">
+      <!-- Grupo 1 -->
+      <div class="brands-group active" data-group="1">
+        <button class="brands-btn" data-brand="Toyota">
+          <img src="https://www.carlogos.org/car-logos/toyota-logo.png" alt="Toyota">
+          <span>Toyota</span>
+        </button>
+        <button class="brands-btn" data-brand="Ford">
+          <img src="https://www.carlogos.org/car-logos/ford-logo.png" alt="Ford">
+          <span>Ford</span>
+        </button>
+        <button class="brands-btn" data-brand="BMW">
+          <img src="https://www.carlogos.org/car-logos/bmw-logo.png" alt="BMW">
+          <span>BMW</span>
+        </button>
+        <button class="brands-btn" data-brand="Tesla">
+          <img src="https://www.carlogos.org/car-logos/tesla-logo.png" alt="Tesla">
+          <span>Tesla</span>
+        </button>
+      </div>
+      
+      <!-- Grupo 2 -->
+      <div class="brands-group" data-group="2">
+        <button class="brands-btn" data-brand="Honda">
+          <img src="https://www.carlogos.org/car-logos/honda-logo.png" alt="Honda">
+          <span>Honda</span>
+        </button>
+        <button class="brands-btn" data-brand="Mercedes">
+          <img src="https://www.carlogos.org/car-logos/mercedes-benz-logo.png" alt="Mercedes">
+          <span>Mercedes</span>
+        </button>
+        <button class="brands-btn" data-brand="Audi">
+          <img src="https://www.carlogos.org/car-logos/audi-logo.png" alt="Audi">
+          <span>Audi</span>
+        </button>
+        <button class="brands-btn" data-brand="Nissan">
+          <img src="https://www.carlogos.org/car-logos/nissan-logo.png" alt="Nissan">
+          <span>Nissan</span>
+        </button>
+      </div>
+      
+      <!-- Grupo 3 -->
+      <div class="brands-group" data-group="3">
+        <button class="brands-btn" data-brand="Volkswagen">
+          <img src="https://www.carlogos.org/car-logos/volkswagen-logo.png" alt="Volkswagen">
+          <span>Volkswagen</span>
+        </button>
+        <button class="brands-btn" data-brand="Hyundai">
+          <img src="https://www.carlogos.org/car-logos/hyundai-logo.png" alt="Hyundai">
+          <span>Hyundai</span>
+        </button>
+        <button class="brands-btn" data-brand="Kia">
+          <img src="https://www.carlogos.org/car-logos/kia-logo.png" alt="Kia">
+          <span>Kia</span>
+        </button>
+        <button class="brands-btn" data-brand="Mazda">
+          <img src="https://www.carlogos.org/car-logos/mazda-logo.png" alt="Mazda">
+          <span>Mazda</span>
+        </button>
+      </div>
+      
+      <!-- Grupo 4 -->
+      <div class="brands-group" data-group="4">
+        <button class="brands-btn" data-brand="Chevrolet">
+          <img src="https://www.carlogos.org/car-logos/chevrolet-logo.png" alt="Chevrolet">
+          <span>Chevrolet</span>
+        </button>
+        <button class="brands-btn" data-brand="Subaru">
+          <img src="https://www.carlogos.org/car-logos/subaru-logo.png" alt="Subaru">
+          <span>Subaru</span>
+        </button>
+        <button class="brands-btn" data-brand="Volvo">
+          <img src="https://www.carlogos.org/car-logos/volvo-logo.png" alt="Volvo">
+          <span>Volvo</span>
+        </button>
+        <button class="brands-btn" data-brand="Lexus">
+          <img src="https://www.carlogos.org/car-logos/lexus-logo.png" alt="Lexus">
+          <span>Lexus</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="navigation">
+      <button id="next-btn" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/brands.js') }}"></script>
+</body>
+</html>

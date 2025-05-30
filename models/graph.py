@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
 
 # Conecta a tu base
-driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tu_contraseña"))
+driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "estructura"))
 
 def get_recommendations(brand, budget, transmission, types):
     query = """

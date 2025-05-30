@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecciona tus tipos de vehículo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/type.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>¿Qué tipo de vehículo prefieres?</h1>
+    <p class="subtitle">Puedes seleccionar más de una opción</p>
+    
+    <div class="types-grid">
+      <button class="type-btn" data-type="sedan">
+        <img src="{{ url_for('static', filename='images/sedan-icon.png') }}" alt="Sedán" onerror="this.style.display='none'">
+        <span>Sedán</span>
+      </button>
+      
+      <button class="type-btn" data-type="suv">
+        <img src="{{ url_for('static', filename='images/suv-icon.png') }}" alt="SUV" onerror="this.style.display='none'">
+        <span>SUV</span>
+      </button>
+      
+      <button class="type-btn" data-type="hatchback">
+        <img src="{{ url_for('static', filename='images/hatchback-icon.png') }}" alt="Hatchback" onerror="this.style.display='none'">
+        <span>Hatchback</span>
+      </button>
+      
+      <button class="type-btn" data-type="pickup">
+        <img src="{{ url_for('static', filename='images/pickup-icon.png') }}" alt="Pickup" onerror="this.style.display='none'">
+        <span>Pickup</span>
+      </button>
+      
+      <button class="type-btn" data-type="coupe">
+        <img src="{{ url_for('static', filename='images/coupe-icon.png') }}" alt="Coupé" onerror="this.style.display='none'">
+        <span>Coupé</span>
+      </button>
+      
+      <button class="type-btn" data-type="convertible">
+        <img src="{{ url_for('static', filename='images/convertible-icon.png') }}" alt="Convertible" onerror="this.style.display='none'">
+        <span>Convertible</span>
+      </button>
+    </div>
+    
+    <div class="navigation">
+      <button id="next-btn" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/type.js') }}"></script>
+</body>
+</html>

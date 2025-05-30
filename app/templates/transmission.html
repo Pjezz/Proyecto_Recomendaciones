@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecciona tu tipo de transmisión</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/transmission.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>¿Qué tipo de transmisión prefieres?</h1>
+    
+    <div class="transmission-grid">
+      <button class="transmission-btn" data-transmission="automatic">
+        <img src="{{ url_for('static', filename='images/automatic-icon.png') }}" alt="Automática" onerror="this.style.display='none'">
+        <span>Automática</span>
+        <small>Más cómoda para el tráfico urbano</small>
+      </button>
+      
+      <button class="transmission-btn" data-transmission="manual">
+        <img src="{{ url_for('static', filename='images/manual-icon.png') }}" alt="Manual" onerror="this.style.display='none'">
+        <span>Manual</span>
+        <small>Mayor control y eficiencia</small>
+      </button>
+      
+      <button class="transmission-btn" data-transmission="semiautomatic">
+        <img src="{{ url_for('static', filename='images/semiautomatic-icon.png') }}" alt="Semiautomática" onerror="this.style.display='none'">
+        <span>Semiautomática</span>
+        <small>Lo mejor de ambos mundos</small>
+      </button>
+    </div>
+    
+    <div class="navigation">
+      <button id="next-btn" disabled>Descubre tus Recomendaciones</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/transmission.js') }}"></script>
+</body>
+</html>

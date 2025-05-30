@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecciona el tipo de combustible</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>¿Qué tipo de combustible prefieres?</h1>
+    <p class="subtitle">Selecciona una opción</p>
+    
+    <div class="fuel-grid">
+      <button class="fuel-btn" data-fuel="gasolina">
+        <img src="{{ url_for('static', filename='images/gas-icon.png') }}" alt="Gasolina" onerror="this.style.display='none'">
+        <span>Gasolina</span>
+      </button>
+      
+      <button class="fuel-btn" data-fuel="diesel">
+        <img src="{{ url_for('static', filename='images/diesel-icon.png') }}" alt="Diésel" onerror="this.style.display='none'">
+        <span>Diésel</span>
+      </button>
+      
+      <button class="fuel-btn" data-fuel="electrico">
+        <img src="{{ url_for('static', filename='images/electric-icon.png') }}" alt="Eléctrico" onerror="this.style.display='none'">
+        <span>Eléctrico</span>
+      </button>
+      
+      <button class="fuel-btn" data-fuel="hibrido">
+        <img src="{{ url_for('static', filename='images/hybrid-icon.png') }}" alt="Híbrido" onerror="this.style.display='none'">
+        <span>Híbrido</span>
+      </button>
+    </div>
+    
+    <div class="navigation">
+      <button id="next-btn" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/fuel.js') }}"></script>
+</body>
+</html>

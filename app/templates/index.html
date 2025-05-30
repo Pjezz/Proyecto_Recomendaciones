@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recomendador de Autos - Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+  <!-- Carrusel como fondo -->
+  <div class="carrusel-background">
+    <div class="carrusel-imagenes">
+      <img src="{{ url_for('static', filename='images/Honda_01.jpg') }}" alt="Honda" class="active" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/BMW_A.jpeg') }}" alt="BMW" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/R.jpg') }}" alt="Auto deportivo" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/mclaren.jpg') }}" alt="McLaren" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/Nissan.jpg') }}" alt="Nissan" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/RAWR.jpg') }}" alt="Auto de lujo" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/AUDI.jpg') }}" alt="Audi" onerror="this.style.display='none'">
+      <img src="{{ url_for('static', filename='images/OIP.jpg') }}" alt="Auto clásico" onerror="this.style.display='none'">
+    </div>
+  </div>
+
+  <!-- Formulario de login -->
+  <div class="login-container">
+    <div class="login-form">
+      <h1>Iniciar Sesión</h1>
+      <p class="subtitle">Encuentra el auto perfecto para ti</p>
+      
+      <form id="login-form">
+        <div class="input-group">
+          <input type="text" placeholder="Usuario" id="username" required>
+        </div>
+        <div class="input-group">
+          <input type="password" placeholder="Contraseña" id="password" required>
+        </div>
+        <button type="submit" id="login-button">Ingresar</button>
+      </form>
+      
+      <div id="error-message" class="error-message" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>

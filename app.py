@@ -6,7 +6,7 @@ from models.graph import get_recommendations
 
 NEO4J_URI = "bolt://localhost:7687"  # O "neo4j+s://<host>:<port>" si estás usando Aura
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "estructura"  # Reemplaza esto con tu contraseña real
+NEO4J_PASSWORD = "estructura"  
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 app = Flask(__name__)
