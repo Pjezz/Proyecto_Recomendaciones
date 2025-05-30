@@ -1,0 +1,152 @@
+/* ============================================= */
+/* ESTILOS GENERALES Y RESET                     */
+/* ============================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ============================================= */
+/* CARRUSEL DE FONDO (IMÁGENES QUE CAMBIAN)      */
+/* ============================================= */
+.carrusel-background {
+  position: fixed; /* Fijo en toda la pantalla */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Detrás del formulario */
+}
+
+.carrusel-imagenes {
+  width: 100%;
+  height: 100%;
+}
+
+.carrusel-imagenes img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ajusta la imagen sin deformar */
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out; /* Efecto suave */
+  image-rendering: -webkit-optimize-contrast; /* Chrome/Safari */
+  image-rendering: crisp-edges; /* Firefox */
+  image-rendering: pixelated; /* Edge */
+  filter: blur(0.5px) contrast(1.1); /* Suaviza y aumenta contraste */
+
+}
+
+.carrusel-imagenes img.active {
+  opacity: 1; /* Solo la imagen activa es visible */
+}
+
+/* Capa oscura para mejorar legibilidad del texto */
+.carrusel-background::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Ajusta el valor (0.4) para más/menos oscuridad */
+  z-index: 1;
+}
+
+/* ============================================= */
+/* FORMULARIO DE LOGIN (ENCIMA DEL CARRUSEL)     */
+/* ============================================= */
+.login-container {
+  background: rgba(255, 255, 255, 0.9); /* Fondo semi-transparente */
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  backdrop-filter: blur(8px); /* Efecto vidrio esmerilado */
+  z-index: 2; /* Encima del carrusel */
+}
+
+.login-container h1 {
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.login-container input {
+  width: 100%;
+  padding: 0.9rem;
+  margin: 0.75rem 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.8); /* Inputs ligeramente transparentes */
+  transition: all 0.3s ease;
+}
+
+.login-container input:focus {
+  outline: 2px solid #6200ea; /* Borde morado al enfocar */
+  background: white;
+}
+
+.login-container button {
+  width: 100%;
+  padding: 0.9rem;
+  background: #6200ea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.login-container button:hover {
+  background: #3700b3; /* Color más oscuro al pasar el mouse */
+  transform: translateY(-2px); /* Efecto de elevación */
+}
+
+.login-container button:active {
+  transform: translateY(0); /* Vuelve a posición normal al hacer clic */
+}
+
+/* ============================================= */
+/* DISEÑO RESPONSIVE (PARA MÓVILES)              */
+/* ============================================= */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 1.8rem;
+    max-width: 350px;
+  }
+  
+  .login-container h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 1.5rem;
+    max-width: 300px;
+  }
+  
+  .login-container input,
+  .login-container button {
+    padding: 0.8rem;
+  }
+}

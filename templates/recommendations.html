@@ -1,0 +1,28 @@
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const userData = {
+    brand: 'Toyota',
+    budget: '15,000 - 30,000',
+    transmission: 'automatic',
+    types: ['suv', 'sedan']
+  };
+
+  const res = await fetch('http://localhost:5000/api/recommendations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  });
+
+  const data = await res.json();
+  const container = document.getElementById('recommendations-container');
+  data.forEach(item => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <h3>${item.modelo}</h3>
+      <p>Precio: ${item.precio}</p>
+      <p>Transmisión: ${item.transmision}</p>
+    `;
+    container.appendChild(div);
+  });
+});
+</script>

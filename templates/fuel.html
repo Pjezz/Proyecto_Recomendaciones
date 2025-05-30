@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecciona el tipo de combustible</title>
+  <link rel="stylesheet" href="./css/fuel.css">
+</head>
+<body>
+  <div class="container">
+    <h1>¿Qué tipo de combustible prefieres?</h1>
+    <p class="subtitle">Selecciona una opción</p>
+    
+    <div class="fuel-grid">
+      <button class="fuel-btn" data-fuel="gasolina">
+        <img src="./images/gas-icon.png" alt="Gasolina">
+        <span>Gasolina</span>
+      </button>
+      
+      <button class="fuel-btn" data-fuel="diesel">
+        <img src="./images/diesel-icon.png" alt="Diésel">
+        <span>Diésel</span>
+      </button>
+      
+      <button class="fuel-btn" data-fuel="electrico">
+        <img src="./images/electric-icon.png" alt="Eléctrico">
+        <span>Eléctrico</span>
+      </button>
+    </div>
+    
+    <div class="navigation">
+      <button id="next-btn" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <script src="./js/fuel.js"></script>
+</body>
+</html>

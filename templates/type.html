@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecciona tus tipos de vehículo</title>
+  <link rel="stylesheet" href="./css/type.css">
+</head>
+<body>
+  <div class="container">
+    <h1>¿Qué tipo de vehículo prefieres?</h1>
+    <p class="subtitle">Puedes seleccionar más de una opción</p>
+    
+    <div class="types-grid">
+      <button class="type-btn" data-type="sedan">
+        <img src="./images/sedan-icon.png" alt="Sedán">
+        <span>Sedán</span>
+      </button>
+      
+      <button class="type-btn" data-type="suv">
+        <img src="./images/suv-icon.png" alt="SUV">
+        <span>SUV</span>
+      </button>
+      
+      <button class="type-btn" data-type="hatchback">
+        <img src="./images/hatchback-icon.png" alt="Hatchback">
+        <span>Hatchback</span>
+      </button>
+      
+      <button class="type-btn" data-type="pickup">
+        <img src="./images/pickup-icon.png" alt="Pickup">
+        <span>Pickup</span>
+      </button>
+      
+      <button class="type-btn" data-type="coupe">
+        <img src="./images/coupe-icon.png" alt="Coupé">
+        <span>Coupé</span>
+      </button>
+      
+      <button class="type-btn" data-type="convertible">
+        <img src="./images/convertible-icon.png" alt="Convertible">
+        <span>Convertible</span>
+      </button>
+    </div>
+    
+    <div class="navigation">
+      <button id="next-btn" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <script src="./js/type.js"></script>
+</body>
+</html>
