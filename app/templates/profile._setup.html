@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración de Perfil</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/profile_setup.css') }}">
+</head>
+<body>
+  <!-- Barra de navegación superior -->
+  <nav class="top-navbar">
+    <div class="nav-content">
+      <div class="nav-left">
+        <div class="user-menu">
+          <button class="user-menu-btn" id="user-menu-btn">
+            <span class="user-icon">👤</span>
+            <span class="user-name" id="user-name">Usuario</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <a href="#" onclick="openProfileModal()">👤 Ver Perfil</a>
+            <a href="#" onclick="openFavoritesModal()">❤️ Favoritos</a>
+            <a href="#" onclick="toggleTheme()">🌙 Tema Oscuro</a>
+            <hr>
+            <a href="/logout" onclick="return confirmLogout()">🚪 Cerrar Sesión</a>
+          </div>
+        </div>
+      </div>
+      <div class="nav-center">
+        <h2>Configuración de Perfil</h2>
+      </div>
+      <div class="nav-right">
+        <span class="step-indicator">Paso 1/6</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="profile-setup-card">
+      <h1>¡Bienvenido! Personalicemos tu experiencia</h1>
+      <p class="subtitle">Esta información nos ayudará a darte mejores recomendaciones</p>
+      
+      <form id="profile-form">
+        <!-- Nombre de usuario -->
+        <div class="form-group">
+          <label for="display-name">¿Cómo te gusta que te llamen?</label>
+          <input type="text" id="display-name" name="display-name" placeholder="Tu nombre preferido" required>
+        </div>
+
+        <!-- Género -->
+        <div class="form-group">
+          <label>Género</label>
+          <div class="gender-options">
+            <button type="button" class="gender-btn" data-gender="masculino">
+              <span class="gender-icon">👨</span>
+              <span>Masculino</span>
+            </button>
+            <button type="button" class="gender-btn" data-gender="femenino">
+              <span class="gender-icon">👩</span>
+              <span>Femenino</span>
+            </button>
+            <button type="button" class="gender-btn" data-gender="otro">
+              <span class="gender-icon">🧑</span>
+              <span>Otro</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Edad -->
+        <div class="form-group">
+          <label for="age-range">Rango de edad</label>
+          <div class="age-options">
+            <button type="button" class="age-btn" data-age="18-25">18-25</button>
+            <button type="button" class="age-btn" data-age="26-35">26-35</button>
+            <button type="button" class="age-btn" data-age="36-45">36-45</button>
+            <button type="button" class="age-btn" data-age="46-55">46-55</button>
+            <button type="button" class="age-btn" data-age="56+">56+</button>
+          </div>
+        </div>
+
+        <!-- Botón continuar -->
+        <div class="form-actions">
+          <button type="submit" id="continue-btn" disabled>Continuar con las recomendaciones</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de perfil -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mi Perfil</h3>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="profile-modal-body">
+        <!-- Contenido se carga dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de favoritos -->
+  <div class="modal-overlay" id="favorites-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mis Favoritos</h3>
+        <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="favorites-modal-body">
+        <p>Aún no tienes favoritos. ¡Completa el proceso para guardar tus autos preferidos!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/profile_setup.js') }}"></script>
+</body>
+</html>

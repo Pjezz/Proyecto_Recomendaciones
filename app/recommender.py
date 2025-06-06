@@ -2,6 +2,7 @@
 """
 Sistema de recomendaciones de autos usando Neo4j
 Conecta con la base de datos y genera recomendaciones basadas en las preferencias del usuario
+Incluye personalización demográfica por género y edad
 """
 
 from neo4j import GraphDatabase
@@ -239,9 +240,93 @@ class CarRecommender:
         
         return recommendations
     
-    def get_recommendations(self, brands=None, budget=None, fuel=None, types=None, transmission=None) -> List[Dict]:
+    def apply_demographic_scoring(self, recommendations: List[Dict], gender: str, age_range: str) -> List[Dict]:
+        """Aplicar personalización demográfica según género y edad"""
+        
+        # Definir grupos de edad
+        age_group = self.get_age_group(age_range)
+        
+        logger.info(f"Aplicando scoring demográfico: género={gender}, edad_grupo={age_group}")
+        
+        for car in recommendations:
+            demographic_bonus = 0
+            car_type = car.get('type', '').lower()
+            car_brand = car.get('brand', '').lower()
+            car_name = car.get('name', '').lower()
+            features_text = str(car.get('features', [])).lower()
+            
+            # Lógica para mujeres
+            if gender == 'femenino':
+                if age_group == 'young':  # 18-25: igual que hombres jóvenes
+                    if car_type in ['coupé', 'convertible'] or any(sport_word in car_name for sport_word in ['sport', 'gt', 'turbo']):
+                        demographic_bonus += 5
+                        logger.debug(f"Bonus joven femenino deportivo: +5 para {car['name']}")
+                        
+                elif age_group == 'reproductive':  # 26-45: preferencia familiar
+                    if car_type in ['suv']:
+                        demographic_bonus += 15
+                        logger.debug(f"Bonus reproductivo femenino SUV: +15 para {car['name']}")
+                    elif car_type == 'sedán':
+                        demographic_bonus += 10
+                        logger.debug(f"Bonus reproductivo femenino sedán: +10 para {car['name']}")
+                    # Bonus por características familiares
+                    if any(family_word in features_text for family_word in ['familia', 'seguridad', 'espacio', 'asientos']):
+                        demographic_bonus += 8
+                        logger.debug(f"Bonus características familiares: +8 para {car['name']}")
+                        
+                elif age_group == 'mature':  # 46+: comfort y luxury
+                    if any(luxury_brand in car_brand for luxury_brand in ['mercedes', 'bmw', 'audi', 'lexus']):
+                        demographic_bonus += 12
+                        logger.debug(f"Bonus marca premium mujer madura: +12 para {car['name']}")
+            
+            # Lógica para hombres
+            elif gender == 'masculino':
+                if age_group == 'young':  # 18-25: deportivos
+                    if car_type in ['coupé', 'convertible'] or any(sport_word in car_name for sport_word in ['sport', 'gt', 'turbo']):
+                        demographic_bonus += 8
+                        logger.debug(f"Bonus joven masculino deportivo: +8 para {car['name']}")
+                        
+                elif age_group == 'mature':  # 46+: comfort y luxury
+                    if any(luxury_brand in car_brand for luxury_brand in ['mercedes', 'bmw', 'audi', 'lexus']):
+                        demographic_bonus += 12
+                        logger.debug(f"Bonus marca premium hombre maduro: +12 para {car['name']}")
+            
+            # Para todos: bonificación por características de comfort en edad madura
+            if age_group == 'mature':
+                comfort_features = ['cuero', 'premium', 'lujo', 'confort', 'leather', 'luxury']
+                for feature in comfort_features:
+                    if feature in features_text:
+                        demographic_bonus += 3
+                        logger.debug(f"Bonus comfort maduro: +3 para {car['name']}")
+                        break
+            
+            # Aplicar bonificación
+            if demographic_bonus > 0:
+                original_score = car.get('similarity_score', 0)
+                car['similarity_score'] = original_score + demographic_bonus
+                car['demographic_bonus'] = demographic_bonus
+                logger.info(f"Bonus demográfico aplicado: {car['name']} +{demographic_bonus} (total: {car['similarity_score']})")
+        
+        # Reordenar por puntuación actualizada
+        recommendations.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
+        
+        return recommendations
+    
+    def get_age_group(self, age_range: str) -> str:
+        """Convertir rango de edad a grupo demográfico"""
+        if age_range in ['18-25']:
+            return 'young'
+        elif age_range in ['26-35', '36-45']:
+            return 'reproductive'
+        elif age_range in ['46-55', '56+']:
+            return 'mature'
+        else:
+            return 'unknown'
+    
+    def get_recommendations(self, brands=None, budget=None, fuel=None, types=None, transmission=None, gender=None, age_range=None) -> List[Dict]:
         """
         Obtener recomendaciones de autos basadas en preferencias del usuario
+        Incluye personalización demográfica
         
         Args:
             brands: Lista de marcas preferidas o dict de grupos
@@ -249,18 +334,22 @@ class CarRecommender:
             fuel: Tipo de combustible preferido
             types: Lista de tipos de vehículo preferidos
             transmission: Tipo de transmisión preferida
+            gender: Género del usuario para personalización
+            age_range: Rango de edad del usuario para personalización
         
         Returns:
-            Lista de diccionarios con recomendaciones de autos
+            Lista de diccionarios con recomendaciones de autos personalizadas
         """
         try:
             # Log de entrada para debugging
-            logger.info("=== GENERANDO RECOMENDACIONES ===")
+            logger.info("=== GENERANDO RECOMENDACIONES PERSONALIZADAS ===")
             logger.info(f"Brands: {brands}")
             logger.info(f"Budget: {budget}")
             logger.info(f"Fuel: {fuel}")
             logger.info(f"Types: {types}")
             logger.info(f"Transmission: {transmission}")
+            logger.info(f"Gender: {gender}")
+            logger.info(f"Age Range: {age_range}")
             
             # Normalizar preferencias
             preferences = self.normalize_preferences(brands, budget, fuel, types, transmission)
@@ -275,15 +364,20 @@ class CarRecommender:
             recommendations = self.execute_recommendation_query(query, parameters)
             logger.info(f"Encontradas {len(recommendations)} recomendaciones iniciales")
             
-            # Agregar puntuación de similitud
+            # Agregar puntuación de similitud básica
             if recommendations:
                 recommendations = self.add_similarity_score(recommendations, preferences)
-                logger.info(f"Recomendaciones ordenadas por similitud")
+                logger.info(f"Puntuación básica aplicada")
+                
+                # Aplicar personalización demográfica si se proporciona
+                if gender and age_range:
+                    recommendations = self.apply_demographic_scoring(recommendations, gender, age_range)
+                    logger.info(f"Personalización demográfica aplicada")
             
             # Limitar a máximo 10 recomendaciones
             recommendations = recommendations[:10]
             
-            logger.info(f"Devolviendo {len(recommendations)} recomendaciones finales")
+            logger.info(f"Devolviendo {len(recommendations)} recomendaciones finales personalizadas")
             return recommendations
             
         except Exception as e:
@@ -354,7 +448,7 @@ def get_recommender_instance():
     
     return _recommender_instance
 
-def get_recommendations(brands=None, budget=None, fuel=None, types=None, transmission=None):
+def get_recommendations(brands=None, budget=None, fuel=None, types=None, transmission=None, gender=None, age_range=None):
     """
     Función principal para obtener recomendaciones (compatibilidad con Flask)
     
@@ -365,19 +459,19 @@ def get_recommendations(brands=None, budget=None, fuel=None, types=None, transmi
     if recommender is None:
         logger.error("No hay conexión a Neo4j disponible")
         # Devolver datos de ejemplo si no hay conexión
-        return get_fallback_recommendations(brands, budget, fuel, types, transmission)
+        return get_fallback_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
     
     try:
-        return recommender.get_recommendations(brands, budget, fuel, types, transmission)
+        return recommender.get_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
     except Exception as e:
         logger.error(f"Error en get_recommendations: {e}")
-        return get_fallback_recommendations(brands, budget, fuel, types, transmission)
+        return get_fallback_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
 
-def get_fallback_recommendations(brands=None, budget=None, fuel=None, types=None, transmission=None):
+def get_fallback_recommendations(brands=None, budget=None, fuel=None, types=None, transmission=None, gender=None, age_range=None):
     """Recomendaciones de respaldo cuando Neo4j no está disponible"""
-    logger.warning("Usando recomendaciones de respaldo")
+    logger.warning("Usando recomendaciones de respaldo con personalización demográfica")
     
-    # Datos de ejemplo basados en las preferencias
+    # Datos de ejemplo expandidos
     fallback_cars = [
         {
             "id": "fallback_1",
@@ -389,41 +483,83 @@ def get_fallback_recommendations(brands=None, budget=None, fuel=None, types=None
             "type": "Sedán",
             "fuel": "Gasolina",
             "transmission": "Automática",
-            "features": ["Aire acondicionado", "Radio AM/FM", "Bluetooth", "Cámara trasera"],
+            "features": ["Aire acondicionado", "Radio AM/FM", "Bluetooth", "Cámara trasera", "Seguridad Toyota Safety"],
             "similarity_score": 85.0,
             "image": None
         },
         {
             "id": "fallback_2",
-            "name": "Honda Civic 2024",
-            "model": "Civic",
+            "name": "Honda CR-V 2024",
+            "model": "CR-V",
             "brand": "Honda",
             "year": 2024,
-            "price": 27000,
-            "type": "Sedán",
+            "price": 35000,
+            "type": "SUV",
             "fuel": "Gasolina",
-            "transmission": "Manual",
-            "features": ["Pantalla táctil", "Sistema de navegación", "Bluetooth", "Control crucero"],
+            "transmission": "Automática",
+            "features": ["Espacio familiar", "Asientos cómodos", "Honda Sensing", "Amplio maletero"],
             "similarity_score": 80.0,
             "image": None
         },
         {
             "id": "fallback_3",
-            "name": "Tesla Model 3 2024",
-            "model": "Model 3",
+            "name": "BMW M3 2024",
+            "model": "M3",
+            "brand": "BMW",
+            "year": 2024,
+            "price": 75000,
+            "type": "Coupé",
+            "fuel": "Gasolina",
+            "transmission": "Manual",
+            "features": ["Motor turbo", "Deportivo", "Asientos sport", "Performance premium"],
+            "similarity_score": 75.0,
+            "image": None
+        },
+        {
+            "id": "fallback_4",
+            "name": "Mercedes-Benz S-Class 2024",
+            "model": "S-Class",
+            "brand": "Mercedes-Benz",
+            "year": 2024,
+            "price": 95000,
+            "type": "Sedán",
+            "fuel": "Gasolina",
+            "transmission": "Automática",
+            "features": ["Asientos de cuero premium", "Lujo alemán", "Tecnología avanzada", "Confort superior"],
+            "similarity_score": 70.0,
+            "image": None
+        },
+        {
+            "id": "fallback_5",
+            "name": "Tesla Model Y 2024",
+            "model": "Model Y",
             "brand": "Tesla",
             "year": 2024,
-            "price": 42000,
-            "type": "Sedán",
+            "price": 55000,
+            "type": "SUV",
             "fuel": "Eléctrico",
             "transmission": "Automática",
-            "features": ["Piloto automático", "Pantalla táctil 15\"", "Supercargador", "Actualización OTA"],
-            "similarity_score": 75.0,
+            "features": ["Piloto automático", "Pantalla táctil", "Carga rápida", "Tecnología verde"],
+            "similarity_score": 68.0,
+            "image": None
+        },
+        {
+            "id": "fallback_6",
+            "name": "Ford Mustang GT 2024",
+            "model": "Mustang GT",
+            "brand": "Ford",
+            "year": 2024,
+            "price": 45000,
+            "type": "Coupé",
+            "fuel": "Gasolina",
+            "transmission": "Manual",
+            "features": ["Motor V8", "Deportivo", "Diseño icónico", "Performance sport"],
+            "similarity_score": 65.0,
             "image": None
         }
     ]
     
-    # Filtrar datos de ejemplo basados en preferencias básicas
+    # Aplicar filtros básicos
     filtered_cars = []
     
     for car in fallback_cars:
@@ -445,11 +581,98 @@ def get_fallback_recommendations(brands=None, budget=None, fuel=None, types=None
             if car["fuel"].lower() != fuel.lower():
                 include_car = False
         
+        # Filtro básico por presupuesto
+        if budget:
+            try:
+                if budget == "100000+":
+                    if car["price"] < 100000:
+                        include_car = False
+                elif "-" in budget:
+                    min_val, max_val = budget.split("-")
+                    if not (int(min_val) <= car["price"] <= int(max_val)):
+                        include_car = False
+            except:
+                pass
+        
         if include_car:
             filtered_cars.append(car)
     
     # Si no hay autos filtrados, devolver todos los de ejemplo
-    return filtered_cars if filtered_cars else fallback_cars
+    final_cars = filtered_cars if filtered_cars else fallback_cars
+    
+    # Aplicar personalización demográfica si se proporciona
+    if gender and age_range:
+        final_cars = apply_demographic_scoring_fallback(final_cars, gender, age_range)
+    
+    return final_cars[:10]  # Limitar a 10
+
+def apply_demographic_scoring_fallback(recommendations, gender, age_range):
+    """Aplicar scoring demográfico a las recomendaciones de fallback"""
+    
+    # Definir grupos de edad
+    if age_range in ['18-25']:
+        age_group = 'young'
+    elif age_range in ['26-35', '36-45']:
+        age_group = 'reproductive'
+    elif age_range in ['46-55', '56+']:
+        age_group = 'mature'
+    else:
+        age_group = 'unknown'
+    
+    for car in recommendations:
+        demographic_bonus = 0
+        car_type = car.get('type', '').lower()
+        car_brand = car.get('brand', '').lower()
+        car_name = car.get('name', '').lower()
+        features_text = str(car.get('features', [])).lower()
+        
+        # Lógica para mujeres
+        if gender == 'femenino':
+            if age_group == 'young':  # 18-25: igual que hombres jóvenes
+                if car_type in ['coupé', 'convertible'] or any(sport_word in car_name for sport_word in ['sport', 'gt', 'turbo', 'mustang', 'm3']):
+                    demographic_bonus += 5
+                    
+            elif age_group == 'reproductive':  # 26-45: preferencia familiar
+                if car_type in ['suv']:
+                    demographic_bonus += 15
+                elif car_type == 'sedán':
+                    demographic_bonus += 10
+                # Bonus por características familiares
+                if any(family_word in features_text for family_word in ['familia', 'seguridad', 'espacio', 'asientos']):
+                    demographic_bonus += 8
+                    
+            elif age_group == 'mature':  # 46+: comfort y luxury
+                if any(luxury_brand in car_brand for luxury_brand in ['mercedes', 'bmw', 'audi', 'lexus']):
+                    demographic_bonus += 12
+        
+        # Lógica para hombres
+        elif gender == 'masculino':
+            if age_group == 'young':  # 18-25: deportivos
+                if car_type in ['coupé', 'convertible'] or any(sport_word in car_name for sport_word in ['sport', 'gt', 'turbo', 'mustang', 'm3']):
+                    demographic_bonus += 8
+                    
+            elif age_group == 'mature':  # 46+: comfort y luxury
+                if any(luxury_brand in car_brand for luxury_brand in ['mercedes', 'bmw', 'audi', 'lexus']):
+                    demographic_bonus += 12
+        
+        # Para todos: bonificación por características de comfort en edad madura
+        if age_group == 'mature':
+            comfort_features = ['cuero', 'premium', 'lujo', 'confort', 'leather', 'luxury']
+            for feature in comfort_features:
+                if feature in features_text:
+                    demographic_bonus += 3
+                    break
+        
+        # Aplicar bonificación
+        if demographic_bonus > 0:
+            original_score = car.get('similarity_score', 0)
+            car['similarity_score'] = original_score + demographic_bonus
+            car['demographic_bonus'] = demographic_bonus
+    
+    # Reordenar por puntuación actualizada
+    recommendations.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
+    
+    return recommendations
 
 def get_database_statistics():
     """Obtener estadísticas de la base de datos"""
@@ -486,36 +709,72 @@ atexit.register(cleanup)
 
 if __name__ == "__main__":
     # Script de prueba
-    print("=== PRUEBA DEL SISTEMA DE RECOMENDACIONES ===")
+    print("=== PRUEBA DEL SISTEMA DE RECOMENDACIONES PERSONALIZADO ===")
     
     # Probar conexión
     if test_connection():
         print("✓ Conexión exitosa")
         
-        # Probar recomendaciones
-        print("\n--- Prueba 1: Autos Toyota económicos ---")
+        # Probar recomendaciones con personalización demográfica
+        print("\n--- Prueba 1: Mujer joven (18-25) buscando auto económico ---")
         recommendations = get_recommendations(
-            brands=["Toyota"],
+            brands=["Toyota", "Honda"],
             budget="15000-30000",
             fuel="Gasolina",
             types=["Sedán"],
-            transmission="Automática"
+            transmission="Automática",
+            gender="femenino",
+            age_range="18-25"
         )
         
         for i, car in enumerate(recommendations[:3], 1):
-            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')}")
+            bonus = car.get('demographic_bonus', 0)
+            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')} (Bonus demográfico: +{bonus})")
         
-        print("\n--- Prueba 2: Autos eléctricos premium ---")
+        print("\n--- Prueba 2: Mujer edad reproductiva (26-35) buscando SUV familiar ---")
         recommendations = get_recommendations(
-            brands=["Tesla"],
-            budget="50000-100000",
-            fuel="Eléctrico",
-            types=["Sedán", "SUV"],
-            transmission="Automática"
+            brands=["Honda", "Toyota"],
+            budget="30000-50000",
+            fuel="Gasolina",
+            types=["SUV"],
+            transmission="Automática",
+            gender="femenino",
+            age_range="26-35"
         )
         
         for i, car in enumerate(recommendations[:3], 1):
-            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')}")
+            bonus = car.get('demographic_bonus', 0)
+            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')} (Bonus demográfico: +{bonus})")
+        
+        print("\n--- Prueba 3: Hombre joven (18-25) buscando deportivo ---")
+        recommendations = get_recommendations(
+            brands=["BMW", "Ford"],
+            budget="40000-80000",
+            fuel="Gasolina",
+            types=["Coupé"],
+            transmission="Manual",
+            gender="masculino",
+            age_range="18-25"
+        )
+        
+        for i, car in enumerate(recommendations[:3], 1):
+            bonus = car.get('demographic_bonus', 0)
+            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')} (Bonus demográfico: +{bonus})")
+        
+        print("\n--- Prueba 4: Persona madura (46+) buscando lujo ---")
+        recommendations = get_recommendations(
+            brands=["Mercedes-Benz", "BMW"],
+            budget="80000-120000",
+            fuel="Gasolina",
+            types=["Sedán"],
+            transmission="Automática",
+            gender="masculino",
+            age_range="46-55"
+        )
+        
+        for i, car in enumerate(recommendations[:3], 1):
+            bonus = car.get('demographic_bonus', 0)
+            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')} (Bonus demográfico: +{bonus})")
         
         # Mostrar estadísticas
         print("\n--- Estadísticas de la base de datos ---")
@@ -527,7 +786,22 @@ if __name__ == "__main__":
         
     else:
         print("✗ No se pudo conectar a Neo4j")
-        print("Asegúrate de que:")
+        print("Probando con datos de ejemplo...")
+        
+        # Probar con datos de fallback
+        recommendations = get_fallback_recommendations(
+            brands=["Toyota"],
+            budget="20000-40000",
+            gender="femenino",
+            age_range="26-35"
+        )
+        
+        print(f"\n--- Recomendaciones de ejemplo (mujer 26-35) ---")
+        for i, car in enumerate(recommendations[:3], 1):
+            bonus = car.get('demographic_bonus', 0)
+            print(f"{i}. {car['name']} - ${car['price']:,} - Score: {car.get('similarity_score', 'N/A')} (Bonus demográfico: +{bonus})")
+        
+        print("\nAsegúrate de que:")
         print("1. Neo4j Desktop esté ejecutándose")
         print("2. La base de datos esté activa")
         print("3. Las credenciales sean correctas")

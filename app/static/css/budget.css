@@ -13,6 +13,7 @@ body {
   align-items: center;
   min-height: 100vh;
   padding: 20px;
+  padding-top: 90px; /* Espacio adicional para la navbar */
 }
 
 .container {
@@ -44,41 +45,67 @@ h1 {
 .budget-btn {
   background: white;
   border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 1.8rem 1rem;
+  border-radius: 15px;
+  padding: 2rem 1rem;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  min-height: 120px;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.budget-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(98, 0, 234, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.budget-btn:hover::before {
+  left: 100%;
 }
 
 .budget-btn:hover {
   border-color: #6200ea;
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
 .budget-btn.selected {
   background-color: #6200ea;
   border-color: #6200ea;
-  transform: scale(1.02);
+  transform: scale(1.03);
+  box-shadow: 0 12px 24px rgba(98, 0, 234, 0.3);
+}
+
+.budget-btn.selected::before {
+  display: none;
 }
 
 /* TEXTO DENTRO DE BOTONES */
 .price {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: bold;
   color: #333;
   transition: color 0.3s;
+  margin-bottom: 0.3rem;
 }
 
 .label {
   font-size: 1rem;
   color: #666;
   transition: color 0.3s;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .budget-btn.selected .price,
@@ -88,22 +115,39 @@ h1 {
 
 /* ===== BOTÓN CONTINUAR ===== */
 #continue-btn {
-  background: #6200ea;
+  background: linear-gradient(135deg, #6200ea, #3700b3);
   color: white;
   border: none;
   padding: 1rem 2.5rem;
   font-size: 1.1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 1rem;
   font-weight: bold;
+  position: relative;
+  overflow: hidden;
+  min-width: 200px;
 }
 
-#continue-btn:hover {
-  background: #3700b3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+#continue-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+#continue-btn:hover::before {
+  left: 100%;
+}
+
+#continue-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(98, 0, 234, 0.4);
 }
 
 #continue-btn:disabled {
@@ -113,10 +157,78 @@ h1 {
   box-shadow: none;
 }
 
+#continue-btn:disabled::before {
+  display: none;
+}
+
+/* ===== INDICADORES ADICIONALES ===== */
+.budget-info {
+  background: rgba(98, 0, 234, 0.1);
+  border: 1px solid rgba(98, 0, 234, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  color: #6200ea;
+  font-size: 0.9rem;
+}
+
+/* ===== TEMA OSCURO ===== */
+body.dark-theme {
+  background-color: #1a1a1a;
+}
+
+body.dark-theme .container {
+  background: #2d2d2d;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme h1 {
+  color: #e0e0e0;
+}
+
+body.dark-theme .budget-btn {
+  background: #3a3a3a;
+  border-color: #555;
+}
+
+body.dark-theme .price {
+  color: #e0e0e0;
+}
+
+body.dark-theme .label {
+  color: #b0b0b0;
+}
+
+body.dark-theme .budget-btn:hover {
+  border-color: #6200ea;
+  background: #444;
+}
+
+body.dark-theme .budget-btn.selected {
+  background-color: #6200ea;
+  border-color: #6200ea;
+}
+
+body.dark-theme .budget-btn.selected .price,
+body.dark-theme .budget-btn.selected .label {
+  color: white;
+}
+
+body.dark-theme .budget-info {
+  background: rgba(98, 0, 234, 0.2);
+  border-color: rgba(98, 0, 234, 0.5);
+  color: #a78bfa;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+  body {
+    padding-top: 100px;
+  }
+  
   .container {
     padding: 1.5rem;
+    margin: 1rem;
   }
   
   .budget-grid {
@@ -126,17 +238,15 @@ h1 {
   
   .budget-btn {
     padding: 1.5rem;
-    min-height: 100px;
+    min-height: 120px;
   }
   
   h1 {
     font-size: 1.8rem;
   }
-}
-
-@media (max-width: 480px) {
+  
   .price {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
   }
   
   .label {
@@ -144,7 +254,86 @@ h1 {
   }
   
   #continue-btn {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .budget-btn {
+    padding: 1.2rem;
+    min-height: 100px;
+  }
+  
+  .price {
+    font-size: 1.3rem;
+  }
+  
+  .label {
+    font-size: 0.85rem;
+  }
+  
+  #continue-btn {
+    width: 100%;
+    max-width: 250px;
     padding: 0.8rem 1.5rem;
     font-size: 1rem;
   }
+  
+  h1 {
+    font-size: 1.6rem;
+  }
+}
+
+/* ===== ANIMACIONES MEJORADAS ===== */
+@keyframes budgetPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.budget-btn.selected {
+  animation: budgetPulse 0.6s ease;
+}
+
+@keyframes slideInBudget {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.budget-btn {
+  animation: slideInBudget 0.5s ease;
+  animation-fill-mode: both;
+}
+
+.budget-btn:nth-child(1) { animation-delay: 0.1s; }
+.budget-btn:nth-child(2) { animation-delay: 0.2s; }
+.budget-btn:nth-child(3) { animation-delay: 0.3s; }
+.budget-btn:nth-child(4) { animation-delay: 0.4s; }
+
+/* ===== MEJORAR ACCESIBILIDAD ===== */
+.budget-btn:focus {
+  outline: 3px solid rgba(98, 0, 234, 0.5);
+  outline-offset: 2px;
+}
+
+#continue-btn:focus {
+  outline: 3px solid rgba(98, 0, 234, 0.5);
+  outline-offset: 2px;
+}
+
+/* ===== EFECTOS ADICIONALES ===== */
+.budget-btn:active {
+  transform: scale(0.98);
+}
+
+.budget-btn.selected:active {
+  transform: scale(1.01);
 }

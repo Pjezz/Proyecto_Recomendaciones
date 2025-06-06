@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Selección por Grupos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/brands.css') }}">
   <style>
     /* Estilos base para evitar FOUC */
@@ -19,6 +20,34 @@
   </style>
 </head>
 <body>
+  <!-- Barra de navegación superior -->
+  <nav class="top-navbar">
+    <div class="nav-content">
+      <div class="nav-left">
+        <div class="user-menu">
+          <button class="user-menu-btn" id="user-menu-btn">
+            <span class="user-icon">👤</span>
+            <span class="user-name" id="user-name">Usuario</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <a href="#" onclick="openProfileModal()">👤 Ver Perfil</a>
+            <a href="#" onclick="openFavoritesModal()">❤️ Favoritos</a>
+            <a href="#" onclick="toggleTheme()">🌙 Tema Oscuro</a>
+            <hr>
+            <a href="/logout" onclick="return confirmLogout()">🚪 Cerrar Sesión</a>
+          </div>
+        </div>
+      </div>
+      <div class="nav-center">
+        <h2>Selecciona tus Marcas Favoritas</h2>
+      </div>
+      <div class="nav-right">
+        <span class="step-indicator">Paso 2/6</span>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <h1>Selecciona tu marca favorita</h1>
     <p class="group-indicator">Grupo <span id="current-group">1</span>/4</p>
@@ -110,6 +139,32 @@
     </div>
   </div>
 
+  <!-- Modales para perfil y favoritos -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mi Perfil</h3>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="profile-modal-body">
+        <!-- Contenido se carga dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="favorites-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mis Favoritos</h3>
+        <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="favorites-modal-body">
+        <p>Aún no tienes favoritos. ¡Completa el proceso para guardar tus autos preferidos!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   <script src="{{ url_for('static', filename='js/brands.js') }}"></script>
 </body>
 </html>

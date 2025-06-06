@@ -4,37 +4,122 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Selecciona tu tipo de transmisión</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/transmission.css') }}">
 </head>
 <body>
+  <!-- Barra de navegación superior -->
+  <nav class="top-navbar">
+    <div class="nav-content">
+      <div class="nav-left">
+        <div class="user-menu">
+          <button class="user-menu-btn" id="user-menu-btn">
+            <span class="user-icon">👤</span>
+            <span class="user-name" id="user-name">Usuario</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <a href="#" onclick="openProfileModal()">👤 Ver Perfil</a>
+            <a href="#" onclick="openFavoritesModal()">❤️ Favoritos</a>
+            <a href="#" onclick="toggleTheme()">🌙 Tema Oscuro</a>
+            <hr>
+            <a href="/logout" onclick="return confirmLogout()">🚪 Cerrar Sesión</a>
+          </div>
+        </div>
+      </div>
+      <div class="nav-center">
+        <h2>Selecciona la Transmisión</h2>
+      </div>
+      <div class="nav-right">
+        <span class="step-indicator">Paso 6/6</span>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <h1>¿Qué tipo de transmisión prefieres?</h1>
+    <p class="subtitle">Última configuración antes de ver tus recomendaciones</p>
     
     <div class="transmission-grid">
       <button class="transmission-btn" data-transmission="automatic">
-        <img src="{{ url_for('static', filename='images/automatic-icon.png') }}" alt="Automática" onerror="this.style.display='none'">
+        <div class="transmission-icon">⚙️</div>
         <span>Automática</span>
         <small>Más cómoda para el tráfico urbano</small>
+        <div class="transmission-details">
+          <ul>
+            <li>✓ Fácil de manejar</li>
+            <li>✓ Ideal para ciudad</li>
+            <li>✓ Menos fatiga</li>
+          </ul>
+        </div>
       </button>
       
       <button class="transmission-btn" data-transmission="manual">
-        <img src="{{ url_for('static', filename='images/manual-icon.png') }}" alt="Manual" onerror="this.style.display='none'">
+        <div class="transmission-icon">🕹️</div>
         <span>Manual</span>
         <small>Mayor control y eficiencia</small>
+        <div class="transmission-details">
+          <ul>
+            <li>✓ Mejor control</li>
+            <li>✓ Más económica</li>
+            <li>✓ Menor mantenimiento</li>
+          </ul>
+        </div>
       </button>
       
       <button class="transmission-btn" data-transmission="semiautomatic">
-        <img src="{{ url_for('static', filename='images/semiautomatic-icon.png') }}" alt="Semiautomática" onerror="this.style.display='none'">
+        <div class="transmission-icon">🎛️</div>
         <span>Semiautomática</span>
         <small>Lo mejor de ambos mundos</small>
+        <div class="transmission-details">
+          <ul>
+            <li>✓ Control manual</li>
+            <li>✓ Comodidad automática</li>
+            <li>✓ Versatilidad</li>
+          </ul>
+        </div>
       </button>
     </div>
     
+    <div class="selection-progress">
+      <h3>🎉 ¡Casi terminamos!</h3>
+      <p>Has completado 5 de 6 pasos. Solo falta seleccionar la transmisión.</p>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: 83%;"></div>
+      </div>
+    </div>
+    
     <div class="navigation">
-      <button id="next-btn" disabled>Descubre tus Recomendaciones</button>
+      <button id="next-btn" disabled>🎯 Descubre tus Recomendaciones</button>
     </div>
   </div>
 
+  <!-- Modales para perfil y favoritos -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mi Perfil</h3>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="profile-modal-body">
+        <!-- Contenido se carga dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="favorites-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mis Favoritos</h3>
+        <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="favorites-modal-body">
+        <p>Aún no tienes favoritos. ¡Completa el proceso para guardar tus autos preferidos!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   <script src="{{ url_for('static', filename='js/transmission.js') }}"></script>
 </body>
 </html>

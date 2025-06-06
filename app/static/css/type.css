@@ -13,6 +13,7 @@ body {
   align-items: center;
   min-height: 100vh;
   padding: 20px;
+  padding-top: 90px; /* Espacio adicional para la navbar */
 }
 
 .container {
@@ -21,13 +22,15 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   padding: 2rem;
   width: 100%;
-  max-width: 900px;
+  max-width: 1000px;
   text-align: center;
 }
 
 h1 {
   color: #333;
   margin-bottom: 0.5rem;
+  font-size: 2rem;
+  font-weight: 600;
 }
 
 .subtitle {
@@ -48,64 +51,132 @@ h1 {
 .type-btn {
   background: white;
   border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 1.5rem 0.5rem;
+  border-radius: 15px;
+  padding: 2rem 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.8rem;
+  min-height: 160px;
+  position: relative;
+  overflow: hidden;
+}
+
+.type-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(98, 0, 234, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.type-btn:hover::before {
+  left: 100%;
 }
 
 .type-btn:hover {
   border-color: #6200ea;
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
 .type-btn.selected {
   background-color: #6200ea;
   border-color: #6200ea;
-  transform: scale(1.05);
+  transform: scale(1.03);
+  box-shadow: 0 12px 24px rgba(98, 0, 234, 0.3);
 }
 
-.type-btn.selected span {
+.type-btn.selected::before {
+  display: none;
+}
+
+.type-btn.selected span,
+.type-btn.selected small {
   color: white;
 }
 
-.type-btn img {
-  width: 70px;
-  height: 70px;
-  object-fit: contain;
+/* Iconos de tipo */
+.type-icon {
+  font-size: 3rem;
   margin-bottom: 0.5rem;
+  transition: transform 0.3s ease;
+}
+
+.type-btn:hover .type-icon {
+  transform: scale(1.1);
 }
 
 .type-btn span {
   font-weight: bold;
   color: #333;
   transition: color 0.3s;
+  font-size: 1.2rem;
+}
+
+.type-btn small {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+  transition: color 0.3s;
+  line-height: 1.3;
+}
+
+/* Resumen de selección */
+.selection-summary {
+  background: rgba(98, 0, 234, 0.1);
+  border: 1px solid rgba(98, 0, 234, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  color: #6200ea;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 /* Navegación */
 .navigation {
-  margin-top: 1rem;
+  margin-top: 2rem;
 }
 
 #next-btn {
-  background: #6200ea;
+  background: linear-gradient(135deg, #6200ea, #3700b3);
   color: white;
   border: none;
-  padding: 0.8rem 2rem;
-  font-size: 1rem;
-  border-radius: 8px;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  min-width: 200px;
 }
 
-#next-btn:hover {
-  background: #3700b3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+#next-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+#next-btn:hover::before {
+  left: 100%;
+}
+
+#next-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(98, 0, 234, 0.4);
 }
 
 #next-btn:disabled {
@@ -115,20 +186,285 @@ h1 {
   box-shadow: none;
 }
 
+#next-btn:disabled::before {
+  display: none;
+}
+
+/* Tema oscuro */
+body.dark-theme {
+  background-color: #1a1a1a;
+}
+
+body.dark-theme .container {
+  background: #2d2d2d;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme h1 {
+  color: #e0e0e0;
+}
+
+body.dark-theme .subtitle {
+  color: #b0b0b0;
+}
+
+body.dark-theme .type-btn {
+  background: #3a3a3a;
+  border-color: #555;
+}
+
+body.dark-theme .type-btn span {
+  color: #e0e0e0;
+}
+
+body.dark-theme .type-btn small {
+  color: #b0b0b0;
+}
+
+body.dark-theme .type-btn:hover {
+  border-color: #6200ea;
+  background: #444;
+}
+
+body.dark-theme .type-btn.selected {
+  background-color: #6200ea;
+  border-color: #6200ea;
+}
+
+body.dark-theme .type-btn.selected span,
+body.dark-theme .type-btn.selected small {
+  color: white;
+}
+
+body.dark-theme .selection-summary {
+  background: rgba(98, 0, 234, 0.2);
+  border-color: rgba(98, 0, 234, 0.5);
+  color: #a78bfa;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  body {
+    padding-top: 100px;
+  }
+  
   .types-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+  }
+  
+  .type-btn {
+    padding: 1.5rem;
+    min-height: 140px;
+  }
+  
+  .type-icon {
+    font-size: 2.5rem;
+  }
+  
+  .container {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  #next-btn {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    min-width: 180px;
   }
 }
 
 @media (max-width: 480px) {
   .types-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
   
-  .container {
-    padding: 1.5rem;
+  .type-btn {
+    padding: 1.2rem;
+    min-height: 120px;
   }
+  
+  .type-icon {
+    font-size: 2rem;
+  }
+  
+  .type-btn span {
+    font-size: 1.1rem;
+  }
+  
+  .type-btn small {
+    font-size: 0.8rem;
+  }
+  
+  #next-btn {
+    width: 100%;
+    max-width: 250px;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.6rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+}
+
+/* Animaciones mejoradas */
+@keyframes typePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.type-btn.selected {
+  animation: typePulse 0.6s ease;
+}
+
+@keyframes slideInType {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.type-btn {
+  animation: slideInType 0.5s ease;
+  animation-fill-mode: both;
+}
+
+.type-btn:nth-child(1) { animation-delay: 0.1s; }
+.type-btn:nth-child(2) { animation-delay: 0.2s; }
+.type-btn:nth-child(3) { animation-delay: 0.3s; }
+.type-btn:nth-child(4) { animation-delay: 0.4s; }
+.type-btn:nth-child(5) { animation-delay: 0.5s; }
+.type-btn:nth-child(6) { animation-delay: 0.6s; }
+
+/* Mejorar accesibilidad */
+.type-btn:focus {
+  outline: 3px solid rgba(98, 0, 234, 0.5);
+  outline-offset: 2px;
+}
+
+#next-btn:focus {
+  outline: 3px solid rgba(98, 0, 234, 0.5);
+  outline-offset: 2px;
+}
+
+/* Efectos adicionales */
+.type-btn:active {
+  transform: scale(0.98);
+}
+
+.type-btn.selected:active {
+  transform: scale(1.01);
+}
+
+/* Indicador de selección múltiple */
+.type-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #6200ea;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+body.dark-theme .type-btn.selected::after {
+  background: rgba(255, 255, 255, 0.95);
+  color: #6200ea;
+}
+
+/* Animación del checkmark */
+@keyframes checkmarkAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.type-btn.selected::after {
+  animation: checkmarkAppear 0.3s ease;
+}
+
+/* Efecto de hover específico por tipo */
+.type-btn[data-type="sedan"]:hover {
+  border-color: #3498db;
+}
+
+.type-btn[data-type="sedan"].selected {
+  background-color: #3498db;
+  border-color: #3498db;
+}
+
+.type-btn[data-type="suv"]:hover {
+  border-color: #e67e22;
+}
+
+.type-btn[data-type="suv"].selected {
+  background-color: #e67e22;
+  border-color: #e67e22;
+}
+
+.type-btn[data-type="hatchback"]:hover {
+  border-color: #2ecc71;
+}
+
+.type-btn[data-type="hatchback"].selected {
+  background-color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.type-btn[data-type="pickup"]:hover {
+  border-color: #95a5a6;
+}
+
+.type-btn[data-type="pickup"].selected {
+  background-color: #95a5a6;
+  border-color: #95a5a6;
+}
+
+.type-btn[data-type="coupe"]:hover {
+  border-color: #e74c3c;
+}
+
+.type-btn[data-type="coupe"].selected {
+  background-color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.type-btn[data-type="convertible"]:hover {
+  border-color: #f39c12;
+}
+
+.type-btn[data-type="convertible"].selected {
+  background-color: #f39c12;
+  border-color: #f39c12;
 }

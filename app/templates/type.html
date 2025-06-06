@@ -4,43 +4,82 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Selecciona tus tipos de vehículo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/type.css') }}">
 </head>
 <body>
+  <!-- Barra de navegación superior -->
+  <nav class="top-navbar">
+    <div class="nav-content">
+      <div class="nav-left">
+        <div class="user-menu">
+          <button class="user-menu-btn" id="user-menu-btn">
+            <span class="user-icon">👤</span>
+            <span class="user-name" id="user-name">Usuario</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <a href="#" onclick="openProfileModal()">👤 Ver Perfil</a>
+            <a href="#" onclick="openFavoritesModal()">❤️ Favoritos</a>
+            <a href="#" onclick="toggleTheme()">🌙 Tema Oscuro</a>
+            <hr>
+            <a href="/logout" onclick="return confirmLogout()">🚪 Cerrar Sesión</a>
+          </div>
+        </div>
+      </div>
+      <div class="nav-center">
+        <h2>Selecciona el Tipo de Vehículo</h2>
+      </div>
+      <div class="nav-right">
+        <span class="step-indicator">Paso 5/6</span>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <h1>¿Qué tipo de vehículo prefieres?</h1>
     <p class="subtitle">Puedes seleccionar más de una opción</p>
     
     <div class="types-grid">
       <button class="type-btn" data-type="sedan">
-        <img src="{{ url_for('static', filename='images/sedan-icon.png') }}" alt="Sedán" onerror="this.style.display='none'">
+        <div class="type-icon">🚗</div>
         <span>Sedán</span>
+        <small>Elegante y eficiente</small>
       </button>
       
       <button class="type-btn" data-type="suv">
-        <img src="{{ url_for('static', filename='images/suv-icon.png') }}" alt="SUV" onerror="this.style.display='none'">
+        <div class="type-icon">🚙</div>
         <span>SUV</span>
+        <small>Espacioso y versátil</small>
       </button>
       
       <button class="type-btn" data-type="hatchback">
-        <img src="{{ url_for('static', filename='images/hatchback-icon.png') }}" alt="Hatchback" onerror="this.style.display='none'">
+        <div class="type-icon">🚘</div>
         <span>Hatchback</span>
+        <small>Compacto y práctico</small>
       </button>
       
       <button class="type-btn" data-type="pickup">
-        <img src="{{ url_for('static', filename='images/pickup-icon.png') }}" alt="Pickup" onerror="this.style.display='none'">
+        <div class="type-icon">🛻</div>
         <span>Pickup</span>
+        <small>Resistente y funcional</small>
       </button>
       
       <button class="type-btn" data-type="coupe">
-        <img src="{{ url_for('static', filename='images/coupe-icon.png') }}" alt="Coupé" onerror="this.style.display='none'">
+        <div class="type-icon">🏎️</div>
         <span>Coupé</span>
+        <small>Deportivo y elegante</small>
       </button>
       
       <button class="type-btn" data-type="convertible">
-        <img src="{{ url_for('static', filename='images/convertible-icon.png') }}" alt="Convertible" onerror="this.style.display='none'">
+        <div class="type-icon">🏖️</div>
         <span>Convertible</span>
+        <small>Libertad y estilo</small>
       </button>
+    </div>
+    
+    <div class="selection-summary" id="selection-summary" style="display: none;">
+      <p>Has seleccionado: <span id="selected-count">0</span> tipos</p>
     </div>
     
     <div class="navigation">
@@ -48,6 +87,32 @@
     </div>
   </div>
 
+  <!-- Modales para perfil y favoritos -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mi Perfil</h3>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="profile-modal-body">
+        <!-- Contenido se carga dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="favorites-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Mis Favoritos</h3>
+        <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="favorites-modal-body">
+        <p>Aún no tienes favoritos. ¡Completa el proceso para guardar tus autos preferidos!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   <script src="{{ url_for('static', filename='js/type.js') }}"></script>
 </body>
 </html>
