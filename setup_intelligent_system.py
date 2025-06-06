@@ -77,7 +77,7 @@ def main():
         try:
             # Importar y probar el recomendador
             sys.path.insert(0, os.path.join(os.getcwd(), "app"))
-            from recommender import get_recommendations
+            from intelligent_recommender import get_recommendations
             
             # Prueba simple
             test_recommendations = get_recommendations(
