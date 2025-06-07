@@ -373,6 +373,7 @@ def save_transmission():
         print(f"❌ Error guardando transmission: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ===== ENDPOINT DE RECOMENDACIONES (ÚNICO) =====
 @app.route("/api/recommendations", methods=["GET"])
 def api_recommendations():
     try:

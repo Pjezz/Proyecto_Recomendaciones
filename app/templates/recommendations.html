@@ -41,7 +41,7 @@
         <div class="page-header">
             <div class="header-content">
                 <h1>🎯 Tus Recomendaciones Personalizadas</h1>
-                <p class="header-subtitle">Basadas en tus preferencias y perfil demográfico</p>
+                <p class="header-subtitle">Resultados filtrados y recomendaciones inteligentes basadas en tus gustos</p>
             </div>
         </div>
 
@@ -51,7 +51,7 @@
             <section class="filters-summary">
                 <div class="section-header">
                     <h2>📋 Filtros Aplicados</h2>
-                    <p class="section-subtitle">Criterios utilizados para tu búsqueda</p>
+                    <p class="section-subtitle">Criterios utilizados para tu búsqueda personalizada</p>
                 </div>
                 <div class="filters-grid" id="filters-summary">
                     <!-- Se llenarán dinámicamente -->
@@ -61,8 +61,8 @@
             <!-- Loading spinner -->
             <div class="loading-container" id="loading">
                 <div class="spinner"></div>
-                <h3>Generando recomendaciones personalizadas...</h3>
-                <p>Analizando tu perfil y preferencias</p>
+                <h3>🔍 Analizando tus preferencias...</h3>
+                <p>Generando filtrados exactos y recomendaciones inteligentes</p>
             </div>
 
             <!-- Error message -->
@@ -74,45 +74,50 @@
                 </div>
             </div>
 
-            <!-- Resultados filtrados (PRIMERO) -->
+            <!-- SECCIÓN 1: RESULTADOS FILTRADOS (Coincidencias exactas) -->
             <section class="results-section filtered-results" id="filtered-section" style="display: none;">
                 <div class="section-header">
-                    <h2>🔍 Datos Filtrados - Coincidencias Exactas</h2>
-                    <p class="section-subtitle">Autos que cumplen exactamente con TODOS tus criterios de búsqueda</p>
+                    <h2>🔍 Resultados Filtrados</h2>
+                    <p class="section-subtitle">Autos que coinciden <strong>exactamente</strong> con todos tus criterios de búsqueda</p>
                     <div class="results-badge filtered-badge">
-                        <span id="filtered-count">0</span> coincidencias exactas
+                        <span id="filtered-count">0</span> coincidencias exactas encontradas
                     </div>
+                    <div id="filtered-stats"></div>
                 </div>
                 <div class="cars-grid" id="filtered-cars">
-                    <!-- Se llenarán dinámicamente -->
+                    <!-- Se llenarán dinámicamente con tarjetas de autos filtrados -->
                 </div>
             </section>
 
-            <!-- Recomendaciones por gustos similares (SEGUNDO) -->
+            <!-- SECCIÓN 2: RECOMENDACIONES INTELIGENTES (Basadas en gustos) -->
             <section class="results-section similar-tastes" id="similar-tastes-section" style="display: none;">
                 <div class="section-header">
-                    <h2>🎯 Recomendaciones por Gustos Similares</h2>
-                    <p class="section-subtitle">Marcas similares a tus selecciones (alemanas, japonesas, etc.)</p>
-                    <div class="results-badge similar-badge">
-                        <span id="similar-count">0</span> recomendaciones por gustos
+                    <h2>🎯 Recomendaciones Inteligentes</h2>
+                    <p class="section-subtitle">Autos sugeridos basándose en los <strong>patrones de tus gustos</strong> y perfil demográfico</p>
+                    <div class="results-badge recommended-badge">
+                        <span id="similar-count">0</span> recomendaciones personalizadas
                     </div>
+                    <div id="recommendation-stats"></div>
                 </div>
                 <div class="cars-grid" id="similar-cars">
-                    <!-- Se llenarán dinámicamente -->
+                    <!-- Se llenarán dinámicamente con tarjetas de recomendaciones -->
                 </div>
             </section>
 
-            <!-- Recomendaciones demográficas (TERCERO) -->
-            <section class="results-section demographic-recommendations" id="demographic-section" style="display: none;">
+            <!-- Información adicional sobre el sistema -->
+            <section class="results-section" id="system-info" style="display: block;">
                 <div class="section-header">
-                    <h2>👤 Recomendaciones Demográficas</h2>
-                    <p class="section-subtitle">Autos recomendados específicamente para tu perfil demográfico</p>
-                    <div class="results-badge demographic-badge">
-                        <span id="demographic-count">0</span> recomendaciones demográficas
-                    </div>
+                    <h2>💡 ¿Cómo funciona nuestro sistema?</h2>
                 </div>
-                <div class="cars-grid" id="demographic-cars">
-                    <!-- Se llenarán dinámicamente -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                    <div style="background: var(--filtered-bg); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--filtered-color);">
+                        <h3 style="color: var(--filtered-color); margin-bottom: 1rem;">🔍 Resultados Filtrados</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Autos que cumplen <strong>exactamente</strong> con tus criterios: marca, presupuesto, combustible, tipo y transmisión seleccionados.</p>
+                    </div>
+                    <div style="background: var(--recommended-bg); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--recommended-color);">
+                        <h3 style="color: var(--recommended-color); margin-bottom: 1rem;">🎯 Recomendaciones Inteligentes</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Sugerencias basadas en <strong>patrones de gustos</strong>: si te gustan las marcas alemanas, te sugerimos otras alemanas premium que no seleccionaste.</p>
+                    </div>
                 </div>
             </section>
 
@@ -123,14 +128,14 @@
                         ← Cambiar Filtros
                     </button>
                     <button class="btn btn-primary" onclick="openFavoritesModal()">
-                        ❤️ Ver Favoritos
+                        ❤️ Ver Mis Favoritos
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modales -->
+    <!-- Modal de perfil -->
     <div class="modal-overlay" id="profile-modal">
         <div class="modal-container">
             <div class="modal-header">
@@ -143,6 +148,7 @@
         </div>
     </div>
 
+    <!-- Modal de favoritos -->
     <div class="modal-overlay" id="favorites-modal">
         <div class="modal-container">
             <div class="modal-header">
@@ -155,6 +161,7 @@
         </div>
     </div>
 
+    <!-- Modal de detalles del auto -->
     <div class="modal-overlay" id="car-modal">
         <div class="modal-container">
             <div class="modal-header">

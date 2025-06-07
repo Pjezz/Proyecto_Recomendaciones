@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Sistema de recomendaciones inteligente para autos
-Funciona con Neo4j y incluye personalización demográfica
+Sistema de recomendaciones inteligente para autos con separación clara entre filtrados y recomendaciones
 """
 
 from neo4j import GraphDatabase
@@ -45,74 +44,47 @@ class CarRecommendationSystem:
         if self.driver:
             self.driver.close()
     
-    def get_recommendations_from_neo4j(self, brands=None, budget=None, fuel=None, types=None, transmission=None, gender=None, age_range=None):
-        """Obtener recomendaciones desde Neo4j con personalización demográfica"""
-        if not self.connected:
-            logger.warning("❌ Neo4j no conectado, usando datos de ejemplo")
-            return self.get_fallback_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
+    def get_brand_patterns(self, selected_brands):
+        """Analizar patrones en las marcas seleccionadas para hacer recomendaciones inteligentes"""
+        if not selected_brands:
+            return []
         
-        try:
-            with self.driver.session() as session:
-                # Normalizar parámetros de entrada para asegurar que sean listas
-                def normalize_param(param):
-                    if param is None:
-                        return []
-                    elif isinstance(param, str):
-                        return [param]
-                    elif isinstance(param, list):
-                        return param
-                    else:
-                        return []
-                
-                # Normalizar todos los parámetros
-                brands = normalize_param(brands)
-                fuel = normalize_param(fuel)
-                types = normalize_param(types)
-                transmission = normalize_param(transmission)
-                
-                logger.info(f"🔍 Parámetros normalizados:")
-                logger.info(f"  Marcas: {brands}")
-                logger.info(f"  Combustible: {fuel}")
-                logger.info(f"  Tipos: {types}")
-                logger.info(f"  Transmisión: {transmission}")
-                
-                # Obtener tanto resultados filtrados como recomendaciones inteligentes
-                filtered_results = self.get_filtered_results(session, brands, budget, fuel, types, transmission, gender, age_range)
-                intelligent_recommendations = self.get_intelligent_recommendations(session, brands, budget, fuel, types, transmission, gender, age_range)
-                
-                # Combinar y marcar tipos
-                all_results = []
-                
-                # Marcar resultados filtrados
-                for car in filtered_results:
-                    car['match_type'] = 'filtered'
-                    car['similarity_score'] = max(car.get('similarity_score', 0), 85)  # Mínimo 85 para filtrados
-                    all_results.append(car)
-                
-                # Marcar recomendaciones inteligentes
-                for car in intelligent_recommendations:
-                    car['match_type'] = 'recommended'
-                    car['similarity_score'] = min(car.get('similarity_score', 0), 84)  # Máximo 84 para recomendaciones
-                    all_results.append(car)
-                
-                logger.info(f"✅ Obtenidos {len(filtered_results)} filtrados + {len(intelligent_recommendations)} recomendaciones de Neo4j")
-                
-                # Si no hay resultados, usar respaldo
-                if not all_results:
-                    logger.info("🔄 No hay resultados, usando respaldo...")
-                    return self.get_fallback_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
-                
-                return all_results
-                
-        except Exception as e:
-            logger.error(f"❌ Error en consulta Neo4j: {e}")
-            traceback.print_exc()
-            return self.get_fallback_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
+        # Definir grupos de marcas por características
+        brand_groups = {
+            'german_luxury': ['BMW', 'Mercedes-Benz', 'Audi', 'Porsche', 'Volkswagen'],
+            'japanese_reliable': ['Toyota', 'Honda', 'Mazda', 'Nissan', 'Subaru', 'Lexus'],
+            'american_power': ['Ford', 'Chevrolet', 'Dodge', 'Cadillac'],
+            'korean_value': ['Hyundai', 'Kia', 'Genesis'],
+            'luxury_premium': ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus', 'Genesis', 'Porsche'],
+            'electric_innovative': ['Tesla', 'BMW', 'Mercedes-Benz', 'Audi'],
+            'sporty_performance': ['BMW', 'Mercedes-Benz', 'Audi', 'Ford', 'Chevrolet', 'Mazda']
+        }
+        
+        # Identificar patrones en las marcas seleccionadas
+        detected_patterns = []
+        for pattern_name, brands_in_pattern in brand_groups.items():
+            # Si al menos 50% de las marcas seleccionadas están en este patrón
+            overlap = len(set(selected_brands) & set(brands_in_pattern))
+            if overlap >= len(selected_brands) * 0.5:
+                detected_patterns.append(pattern_name)
+        
+        # Generar recomendaciones basadas en patrones
+        recommended_brands = set()
+        for pattern in detected_patterns:
+            recommended_brands.update(brand_groups[pattern])
+        
+        # Remover marcas ya seleccionadas
+        recommended_brands = list(recommended_brands - set(selected_brands))
+        
+        logger.info(f"🔍 Patrones detectados: {detected_patterns}")
+        logger.info(f"🎯 Marcas recomendadas: {recommended_brands[:8]}")
+        
+        return recommended_brands
     
-    def get_filtered_results(self, session, brands, budget, fuel, types, transmission, gender, age_range):
-        """Obtener resultados que coinciden exactamente con los filtros"""
+    def get_filtered_cars(self, session, brands, budget, fuel, types, transmission, gender, age_range):
+        """Obtener autos que coinciden EXACTAMENTE con todos los filtros del usuario"""
         try:
-            # Construir consulta para coincidencias exactas
+            # Construir condiciones de filtro estrictas
             conditions = []
             params = {}
             
@@ -120,12 +92,11 @@ class CarRecommendationSystem:
                 conditions.append("m.nombre IN $brands")
                 params['brands'] = brands
             
-            if budget:
-                if isinstance(budget, str) and '-' in budget:
-                    min_price, max_price = budget.split('-')
-                    conditions.append("a.precio >= $min_price AND a.precio <= $max_price")
-                    params['min_price'] = int(min_price)
-                    params['max_price'] = int(max_price)
+            if budget and isinstance(budget, str) and '-' in budget:
+                min_price, max_price = budget.split('-')
+                conditions.append("a.precio >= $min_price AND a.precio <= $max_price")
+                params['min_price'] = int(min_price)
+                params['max_price'] = int(max_price)
             
             if fuel and len(fuel) > 0:
                 conditions.append("c.tipo IN $fuel")
@@ -139,9 +110,9 @@ class CarRecommendationSystem:
                 conditions.append("tr.tipo IN $transmission")
                 params['transmission'] = transmission
             
-            # Si no hay condiciones, no devolver nada (evitar obtener toda la BD)
-            if not conditions:
-                logger.info("⚠️ No hay filtros específicos, no se devuelven resultados filtrados")
+            # Si no hay condiciones suficientes, no retornar nada
+            if len(conditions) < 3:  # Al menos 3 filtros deben estar presentes
+                logger.info("⚠️ Insuficientes filtros para resultados exactos")
                 return []
             
             where_clause = "WHERE " + " AND ".join(conditions)
@@ -154,10 +125,10 @@ class CarRecommendationSystem:
             {where_clause}
             
             WITH a, m, t, c, tr,
-                 85 + (m.reliability * 2) + 
+                 90 + (m.reliability * 2) + 
                  (CASE WHEN a.trim_level = 'Premium' THEN 5 ELSE 0 END) +
                  (CASE 
-                     WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] AND t.categoria = 'SUV' THEN 10
+                     WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] AND t.categoria = 'SUV' THEN 8
                      WHEN $gender = 'masculino' AND $age_range = '18-25' AND t.categoria IN ['Coupé', 'Convertible'] THEN 8
                      WHEN $age_range IN ['46-55', '56+'] AND m.nombre IN ['Mercedes-Benz', 'BMW', 'Audi', 'Lexus'] THEN 8
                      ELSE 0
@@ -177,15 +148,14 @@ class CarRecommendationSystem:
                 filtered_score as similarity_score
             
             ORDER BY filtered_score DESC, a.precio ASC
-            LIMIT 6
+            LIMIT 8
             """
             
             params['gender'] = gender
             params['age_range'] = age_range
             
             logger.info(f"🔍 Ejecutando consulta de filtros exactos")
-            logger.info(f"📊 Condiciones: {conditions}")
-            logger.info(f"📋 Parámetros: {params}")
+            logger.info(f"📋 Condiciones: {len(conditions)} filtros aplicados")
             
             result = session.run(cypher_query, params)
             
@@ -204,76 +174,77 @@ class CarRecommendationSystem:
                     'features': record['features'] or [],
                     'segment': record['segment'],
                     'similarity_score': float(record['similarity_score']),
+                    'match_type': 'filtered',
+                    'match_reason': 'Coincide exactamente con todos tus filtros',
                     'image': None
                 }
                 filtered_cars.append(car)
             
-            logger.info(f"🔍 Obtenidos {len(filtered_cars)} resultados filtrados")
+            logger.info(f"🔍 Obtenidos {len(filtered_cars)} resultados filtrados exactos")
             return filtered_cars
             
         except Exception as e:
-            logger.error(f"❌ Error en filtrados: {e}")
+            logger.error(f"❌ Error en filtrados exactos: {e}")
             return []
     
-    def get_intelligent_recommendations(self, session, brands, budget, fuel, types, transmission, gender, age_range):
-        """Obtener recomendaciones inteligentes basadas en similitudes y demografía"""
+    def get_smart_recommendations(self, session, brands, budget, fuel, types, transmission, gender, age_range):
+        """Obtener recomendaciones inteligentes basadas en patrones de gustos"""
         try:
-            # Consulta más flexible para recomendaciones inteligentes
+            # Obtener marcas recomendadas basadas en patrones
+            recommended_brands = self.get_brand_patterns(brands)
+            
+            if not recommended_brands:
+                logger.info("⚠️ No se detectaron patrones para recomendaciones")
+                return []
+            
+            # Construir consulta más flexible para recomendaciones
             cypher_query = """
             MATCH (a:Auto)-[:ES_MARCA]->(m:Marca)
             MATCH (a)-[:ES_TIPO]->(t:Tipo)
             MATCH (a)-[:USA_COMBUSTIBLE]->(c:Combustible)
             MATCH (a)-[:TIENE_TRANSMISION]->(tr:Transmision)
             
-            // Calcular similitud con preferencias del usuario
+            WHERE m.nombre IN $recommended_brands
+            AND (
+                // Respetar presupuesto si está definido
+                ($min_price IS NULL OR a.precio >= $min_price) AND
+                ($max_price IS NULL OR a.precio <= $max_price * 1.3)  // 30% más flexible en precio
+            )
+            AND (
+                // Preferir tipos seleccionados pero ser flexible
+                $types IS NULL OR SIZE($types) = 0 OR 
+                t.categoria IN $types OR 
+                (t.categoria = 'SUV' AND 'Crossover' IN $types) OR
+                (t.categoria = 'Crossover' AND 'SUV' IN $types)
+            )
+            
             WITH a, m, t, c, tr,
-                 // Score base por confiabilidad y marca
-                 (m.reliability * 3) +
+                 // Calcular score de recomendación
+                 60 + (m.reliability * 3) +
                  (CASE m.price_range
                      WHEN 'económico' THEN 5
-                     WHEN 'medio-bajo' THEN 10
-                     WHEN 'medio' THEN 15
-                     WHEN 'medio-alto' THEN 20
-                     WHEN 'alto' THEN 25
-                     ELSE 10
+                     WHEN 'medio-bajo' THEN 8
+                     WHEN 'medio' THEN 12
+                     WHEN 'medio-alto' THEN 15
+                     WHEN 'alto' THEN 18
+                     ELSE 8
                  END) +
                  
-                 // Bonificación por coincidencia parcial con filtros
-                 (CASE WHEN m.nombre IN $brands THEN 15 ELSE 
-                      (CASE WHEN EXISTS { 
-                          MATCH (m)-[:SIMILAR_A]->(similar:Marca) 
-                          WHERE similar.nombre IN $brands 
-                      } THEN 8 ELSE 0 END)
-                  END) +
-                 (CASE WHEN c.tipo IN $fuel THEN 10 ELSE 0 END) +
-                 (CASE WHEN t.categoria IN $types THEN 10 ELSE 
-                      (CASE WHEN t.categoria IN ['SUV', 'Crossover'] AND 'SUV' IN $types THEN 5 ELSE 0 END)
-                  END) +
-                 (CASE WHEN tr.tipo IN $transmission THEN 8 ELSE 0 END) +
-                 
-                 // Personalización demográfica inteligente
+                 // Bonificación por compatibilidad con gustos
                  (CASE 
-                     WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] THEN
-                         (CASE WHEN t.categoria = 'SUV' THEN 20
-                               WHEN t.categoria = 'Sedán' THEN 15
-                               ELSE 5 END)
-                     WHEN $gender = 'masculino' AND $age_range = '18-25' THEN
-                         (CASE WHEN t.categoria IN ['Coupé', 'Convertible'] THEN 18
-                               WHEN t.categoria = 'Sedán' THEN 12
-                               ELSE 3 END)
-                     WHEN $age_range IN ['46-55', '56+'] THEN
-                         (CASE WHEN m.nombre IN ['Mercedes-Benz', 'BMW', 'Audi', 'Lexus'] THEN 20
-                               ELSE 5 END)
+                     WHEN m.nombre IN ['BMW', 'Mercedes-Benz', 'Audi'] AND $selected_luxury = true THEN 15
+                     WHEN m.nombre IN ['Toyota', 'Honda', 'Mazda'] AND $selected_reliable = true THEN 12
+                     WHEN m.nombre IN ['Ford', 'Chevrolet'] AND $selected_american = true THEN 10
                      ELSE 5
+                 END) +
+                 
+                 // Personalización demográfica
+                 (CASE 
+                     WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] AND t.categoria = 'SUV' THEN 12
+                     WHEN $gender = 'masculino' AND $age_range = '18-25' AND t.categoria IN ['Coupé', 'Convertible'] THEN 10
+                     WHEN $age_range IN ['46-55', '56+'] AND m.nombre IN ['Mercedes-Benz', 'BMW', 'Audi', 'Lexus'] THEN 15
+                     ELSE 3
                  END) as recommendation_score
-            
-            // Filtrar solo recomendaciones inteligentes (no coincidencias exactas)
-            WHERE NOT (
-                ($brands IS NULL OR SIZE($brands) = 0 OR m.nombre IN $brands) AND
-                ($fuel IS NULL OR SIZE($fuel) = 0 OR c.tipo IN $fuel) AND
-                ($types IS NULL OR SIZE($types) = 0 OR t.categoria IN $types) AND
-                ($transmission IS NULL OR SIZE($transmission) = 0 OR tr.tipo IN $transmission)
-            )
             
             RETURN 
                 a.id as id,
@@ -289,25 +260,44 @@ class CarRecommendationSystem:
                 recommendation_score as similarity_score
             
             ORDER BY recommendation_score DESC, a.precio ASC
-            LIMIT 8
+            LIMIT 10
             """
             
+            # Detectar patrones para mejorar recomendaciones
+            selected_luxury = any(brand in ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus'] for brand in brands)
+            selected_reliable = any(brand in ['Toyota', 'Honda', 'Mazda'] for brand in brands)
+            selected_american = any(brand in ['Ford', 'Chevrolet'] for brand in brands)
+            
+            # Preparar parámetros
             params = {
-                'brands': brands if brands else [],
-                'fuel': fuel if fuel else [],
+                'recommended_brands': recommended_brands[:15],  # Limitar para performance
                 'types': types if types else [],
-                'transmission': transmission if transmission else [],
                 'gender': gender,
-                'age_range': age_range
+                'age_range': age_range,
+                'selected_luxury': selected_luxury,
+                'selected_reliable': selected_reliable,
+                'selected_american': selected_american,
+                'min_price': None,
+                'max_price': None
             }
             
-            logger.info(f"🎯 Ejecutando consulta de recomendaciones inteligentes")
-            logger.info(f"📊 Parámetros: {params}")
+            # Agregar parámetros de presupuesto si existe
+            if budget and isinstance(budget, str) and '-' in budget:
+                min_price, max_price = budget.split('-')
+                params['min_price'] = int(min_price)
+                params['max_price'] = int(max_price)
+            
+            logger.info(f"🎯 Ejecutando recomendaciones con {len(recommended_brands)} marcas sugeridas")
+            logger.info(f"📊 Patrones detectados: Lujo={selected_luxury}, Confiable={selected_reliable}, Americano={selected_american}")
             
             result = session.run(cypher_query, params)
             
             recommended_cars = []
             for record in result:
+                # Generar razón de recomendación personalizada
+                brand = record['brand']
+                match_reason = self.generate_recommendation_reason(brand, brands, gender, age_range)
+                
                 car = {
                     'id': record['id'],
                     'name': f"{record['brand']} {record['model']} {record['year']}",
@@ -321,6 +311,8 @@ class CarRecommendationSystem:
                     'features': record['features'] or [],
                     'segment': record['segment'],
                     'similarity_score': min(float(record['similarity_score']), 84),  # Máximo 84 para recomendaciones
+                    'match_type': 'recommended',
+                    'match_reason': match_reason,
                     'image': None
                 }
                 recommended_cars.append(car)
@@ -332,438 +324,193 @@ class CarRecommendationSystem:
             logger.error(f"❌ Error en recomendaciones inteligentes: {e}")
             return []
     
-    def get_relaxed_recommendations(self, session, gender=None, age_range=None):
-        """Obtener recomendaciones con filtros relajados"""
-        try:
-            cypher_query = """
-            MATCH (a:Auto)-[:ES_MARCA]->(m:Marca)
-            MATCH (a)-[:ES_TIPO]->(t:Tipo)
-            MATCH (a)-[:USA_COMBUSTIBLE]->(c:Combustible)
-            MATCH (a)-[:TIENE_TRANSMISION]->(tr:Transmision)
-            
-            WITH a, m, t, c, tr,
-                 m.reliability * 2 + 
-                 (CASE WHEN $gender = 'femenino' AND t.categoria = 'SUV' THEN 15 ELSE 0 END) +
-                 (CASE WHEN $gender = 'masculino' AND t.categoria = 'Coupé' THEN 8 ELSE 0 END) +
-                 (CASE WHEN m.nombre IN ['Toyota', 'Honda', 'BMW', 'Mercedes-Benz'] THEN 10 ELSE 5 END) as score
-            
-            RETURN 
-                a.id as id,
-                a.modelo as model,
-                m.nombre as brand,
-                a.año as year,
-                a.precio as price,
-                t.categoria as type,
-                c.tipo as fuel_type,
-                tr.tipo as transmission,
-                a.caracteristicas as features,
-                a.segmento as segment,
-                score as similarity_score
-            
-            ORDER BY score DESC, a.precio ASC
-            LIMIT 8
-            """
-            
-            result = session.run(cypher_query, gender=gender, age_range=age_range)
-            
-            recommendations = []
-            for record in result:
+    def generate_recommendation_reason(self, brand, selected_brands, gender, age_range):
+        """Generar razón personalizada para la recomendación"""
+        reasons = []
+        
+        # Analizar patrones de marca
+        if any(selected_brand in ['BMW', 'Mercedes-Benz', 'Audi'] for selected_brand in selected_brands):
+            if brand in ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus', 'Genesis']:
+                reasons.append(f"{brand} es similar a tus marcas premium seleccionadas")
+        
+        if any(selected_brand in ['Toyota', 'Honda', 'Mazda'] for selected_brand in selected_brands):
+            if brand in ['Toyota', 'Honda', 'Mazda', 'Nissan', 'Subaru']:
+                reasons.append(f"{brand} comparte la confiabilidad japonesa que prefieres")
+        
+        if any(selected_brand in ['Ford', 'Chevrolet'] for selected_brand in selected_brands):
+            if brand in ['Ford', 'Chevrolet', 'Dodge']:
+                reasons.append(f"{brand} mantiene el espíritu americano de tus selecciones")
+        
+        # Razones demográficas
+        if gender == 'femenino' and age_range in ['26-35', '36-45']:
+            reasons.append("Ideal para tu perfil familiar")
+        elif gender == 'masculino' and age_range == '18-25':
+            reasons.append("Perfecto para tu estilo dinámico")
+        elif age_range in ['46-55', '56+']:
+            reasons.append("Enfocado en confort y prestigio")
+        
+        if not reasons:
+            reasons.append("Recomendado por tu patrón de preferencias")
+        
+        return ". ".join(reasons)
+    
+    def get_fallback_data(self, brands, budget, fuel, types, transmission, gender, age_range):
+        """Datos de respaldo cuando Neo4j no está disponible"""
+        logger.info("🔄 Generando datos de respaldo con separación filtrados/recomendaciones")
+        
+        # Simular datos filtrados (coincidencias exactas)
+        filtered_results = []
+        if brands:
+            for i, brand in enumerate(brands[:3]):  # Máximo 3 marcas
                 car = {
-                    'id': record['id'],
-                    'name': f"{record['brand']} {record['model']} {record['year']}",
-                    'model': record['model'],
-                    'brand': record['brand'],
-                    'year': record['year'],
-                    'price': record['price'],
-                    'type': record['type'],
-                    'fuel': record['fuel_type'],
-                    'transmission': record['transmission'],
-                    'features': record['features'] or [],
-                    'segment': record['segment'],
-                    'similarity_score': float(record['similarity_score']),
+                    'id': f'filtered_{brand.lower()}_{i}',
+                    'name': f'{brand} Premium 2024',
+                    'model': 'Premium',
+                    'brand': brand,
+                    'year': 2024,
+                    'price': 35000 + (i * 5000),
+                    'type': types[0] if types else 'SUV',
+                    'fuel': fuel[0] if fuel else 'Gasolina',
+                    'transmission': transmission[0] if transmission else 'Automática',
+                    'features': ['Premium Package', 'Safety Tech', 'Comfort Features'],
+                    'segment': 'premium',
+                    'similarity_score': 92.0 - (i * 2),
+                    'match_type': 'filtered',
+                    'match_reason': 'Coincide exactamente con todos tus filtros',
                     'image': None
                 }
-                recommendations.append(car)
-            
-            logger.info(f"✅ Obtenidas {len(recommendations)} recomendaciones relajadas")
-            return recommendations
-            
-        except Exception as e:
-            logger.error(f"❌ Error en recomendaciones relajadas: {e}")
-            return []
-    
-    def get_fallback_recommendations(self, brands=None, budget=None, fuel=None, types=None, transmission=None, gender=None, age_range=None):
-        """Recomendaciones de respaldo cuando Neo4j no está disponible"""
-        logger.info("🔄 Generando recomendaciones de respaldo con separación filtrados/recomendaciones")
+                filtered_results.append(car)
         
-        # Base de datos expandida con las marcas que el usuario puede seleccionar
-        sample_cars = [
-            # BMW (marca seleccionada)
-            {
-                'id': 'bmw_1',
-                'name': 'BMW 3 Series 2024',
-                'model': '3 Series',
-                'brand': 'BMW',
-                'year': 2024,
-                'price': 45000,
-                'type': 'Sedán',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['iDrive', 'Asientos de cuero', 'Faros LED', 'Performance premium'],
-                'segment': 'lujo',
-                'similarity_score': 92.0,
-                'match_type': 'potential_filtered',
-                'image': None
-            },
-            {
-                'id': 'bmw_2',
-                'name': 'BMW X3 2024',
-                'model': 'X3',
-                'brand': 'BMW',
-                'year': 2024,
-                'price': 52000,
-                'type': 'SUV',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['xDrive', 'Tecnología BMW', 'Sistema de navegación', 'Control de voz'],
-                'segment': 'lujo',
-                'similarity_score': 90.0,
-                'match_type': 'potential_filtered',
-                'image': None
-            },
+        # Simular recomendaciones inteligentes
+        recommended_results = []
+        
+        # Patrones de recomendación basados en marcas seleccionadas
+        recommendation_patterns = {
+            'BMW': ['Mercedes-Benz', 'Audi', 'Lexus'],
+            'Mercedes-Benz': ['BMW', 'Audi', 'Genesis'],
+            'Audi': ['BMW', 'Mercedes-Benz', 'Lexus'],
+            'Toyota': ['Honda', 'Mazda', 'Subaru'],
+            'Honda': ['Toyota', 'Mazda', 'Nissan'],
+            'Ford': ['Chevrolet', 'Jeep'],
+            'Chevrolet': ['Ford', 'Dodge']
+        }
+        
+        recommended_brands = set()
+        for brand in brands:
+            if brand in recommendation_patterns:
+                recommended_brands.update(recommendation_patterns[brand])
+        
+        recommended_brands = list(recommended_brands)[:4]  # Máximo 4 recomendaciones
+        
+        for i, brand in enumerate(recommended_brands):
+            reason = f"{brand} es similar a tus marcas preferidas"
+            if gender == 'femenino' and age_range in ['26-35', '36-45']:
+                reason += " y es ideal para uso familiar"
             
-            # Mercedes-Benz (marca seleccionada)
-            {
-                'id': 'mercedes_1',
-                'name': 'Mercedes-Benz C-Class 2024',
-                'model': 'C-Class',
-                'brand': 'Mercedes-Benz',
+            car = {
+                'id': f'recommended_{brand.lower()}_{i}',
+                'name': f'{brand} Sport 2024',
+                'model': 'Sport',
+                'brand': brand,
                 'year': 2024,
-                'price': 48000,
-                'type': 'Sedán',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['MBUX', 'Asientos de cuero', 'Sonido Burmester', 'Lujo alemán'],
-                'segment': 'lujo',
-                'similarity_score': 91.0,
-                'match_type': 'potential_filtered',
-                'image': None
-            },
-            
-            # Mazda (marca seleccionada)
-            {
-                'id': 'mazda_1',
-                'name': 'Mazda CX-5 2024',
-                'model': 'CX-5',
-                'brand': 'Mazda',
-                'year': 2024,
-                'price': 32000,
-                'type': 'SUV',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['i-ACTIVSENSE', 'Diseño KODO', 'Interior premium', 'Manejo deportivo'],
-                'segment': 'compacto',
-                'similarity_score': 89.0,
-                'match_type': 'potential_filtered',
-                'image': None
-            },
-            {
-                'id': 'mazda_2',
-                'name': 'Mazda 6 2024',
-                'model': '6',
-                'brand': 'Mazda',
-                'year': 2024,
-                'price': 28000,
-                'type': 'Sedán',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['SkyActiv', 'Diseño elegante', 'Tecnología Mazda', 'Eficiencia'],
-                'segment': 'medio',
-                'similarity_score': 87.0,
-                'match_type': 'potential_filtered',
-                'image': None
-            },
-            
-            # Subaru (marca seleccionada)
-            {
-                'id': 'subaru_1',
-                'name': 'Subaru Outback 2024',
-                'model': 'Outback',
-                'brand': 'Subaru',
-                'year': 2024,
-                'price': 35000,
-                'type': 'SUV',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['Symmetrical AWD', 'EyeSight', 'Aventurero', 'Seguridad Subaru'],
-                'segment': 'aventura',
-                'similarity_score': 88.0,
-                'match_type': 'potential_filtered',
-                'image': None
-            },
-            
-            # Marcas similares (para recomendaciones)
-            {
-                'id': 'audi_1',
-                'name': 'Audi A4 2024',
-                'model': 'A4',
-                'brand': 'Audi',
-                'year': 2024,
-                'price': 44000,
-                'type': 'Sedán',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['Quattro AWD', 'Virtual cockpit', 'Premium sound', 'Tecnología alemana'],
-                'segment': 'lujo',
-                'similarity_score': 78.0,
-                'match_type': 'similar_tastes',
-                'image': None
-            },
-            {
-                'id': 'lexus_1',
-                'name': 'Lexus ES 2024',
-                'model': 'ES',
-                'brand': 'Lexus',
-                'year': 2024,
-                'price': 46000,
-                'type': 'Sedán',
-                'fuel': 'Híbrido',
-                'transmission': 'Automática',
-                'features': ['Lexus Safety System', 'Lujo japonés', 'Confiabilidad', 'Confort premium'],
-                'segment': 'lujo',
-                'similarity_score': 76.0,
-                'match_type': 'similar_tastes',
-                'image': None
-            },
-            {
-                'id': 'honda_1',
-                'name': 'Honda CR-V 2024',
-                'model': 'CR-V',
-                'brand': 'Honda',
-                'year': 2024,
-                'price': 35000,
-                'type': 'SUV',
-                'fuel': 'Gasolina',
-                'transmission': 'Automática',
-                'features': ['Honda Sensing', 'Pantalla táctil', 'Asientos cómodos', 'Amplio maletero'],
-                'segment': 'compacto',
-                'similarity_score': 74.0,
-                'match_type': 'similar_tastes',
-                'image': None
-            },
-            {
-                'id': 'toyota_1',
-                'name': 'Toyota Highlander 2024',
-                'model': 'Highlander',
-                'brand': 'Toyota',
-                'year': 2024,
-                'price': 40000,
-                'type': 'SUV',
-                'fuel': 'Híbrido',
-                'transmission': 'Automática',
-                'features': ['Toyota Safety Sense', 'Híbrido', 'Familiar', 'Confiabilidad japonesa'],
-                'segment': 'familiar',
-                'similarity_score': 72.0,
-                'match_type': 'similar_tastes',
-                'demographic_bonus': 8,
+                'price': 32000 + (i * 6000),
+                'type': types[0] if types else 'SUV',
+                'fuel': fuel[0] if fuel else 'Gasolina', 
+                'transmission': transmission[0] if transmission else 'Automática',
+                'features': ['Advanced Tech', 'Sport Package', 'Premium Interior'],
+                'segment': 'sport',
+                'similarity_score': 78.0 - (i * 3),
+                'match_type': 'recommended',
+                'match_reason': reason,
                 'image': None
             }
-        ]
+            recommended_results.append(car)
         
-        # Normalizar parámetros
-        brands = brands if brands else []
-        fuel = fuel if fuel else []
-        types = types if types else []
-        transmission = transmission if transmission else []
-        
-        # Separar en filtrados y recomendaciones
-        filtered_results = []
-        similar_tastes = []
-        demographic_recs = []
-        
-        for car in sample_cars:
-            car_copy = car.copy()
-            
-            # Verificar si debería ser filtrado exacto
-            should_be_filtered = True
-            
-            if len(brands) > 0 and car['brand'] not in brands:
-                should_be_filtered = False
-            
-            if len(fuel) > 0 and car['fuel'] not in fuel:
-                should_be_filtered = False
-            
-            if len(types) > 0 and car['type'] not in types:
-                should_be_filtered = False
-            
-            if len(transmission) > 0 and car['transmission'] not in transmission:
-                should_be_filtered = False
-            
-            # Verificar presupuesto
-            if budget and isinstance(budget, str) and '-' in budget:
-                try:
-                    min_price, max_price = budget.split('-')
-                    if not (int(min_price) <= car['price'] <= int(max_price)):
-                        should_be_filtered = False
-                except (ValueError, TypeError):
-                    pass
-            
-            # Aplicar personalización demográfica
-            demographic_bonus = 0
-            if gender == 'femenino':
-                if age_range in ['26-35', '36-45'] and car['type'] == 'SUV':
-                    demographic_bonus += 15
-                elif age_range in ['26-35', '36-45'] and car['type'] == 'Sedán':
-                    demographic_bonus += 10
-            elif gender == 'masculino':
-                if age_range == '18-25' and car['type'] in ['Coupé', 'Convertible']:
-                    demographic_bonus += 12
-            
-            if age_range in ['46-55', '56+'] and car['brand'] in ['Mercedes-Benz', 'BMW', 'Audi', 'Lexus']:
-                demographic_bonus += 10
-            
-            car_copy['similarity_score'] += demographic_bonus
-            if demographic_bonus > 0:
-                car_copy['demographic_bonus'] = demographic_bonus
-            
-            # Clasificar
-            if should_be_filtered:
-                car_copy['match_type'] = 'filtered'
-                car_copy['similarity_score'] = max(car_copy['similarity_score'], 85)
-                filtered_results.append(car_copy)
-            elif car.get('match_type') == 'similar_tastes':
-                car_copy['match_type'] = 'recommended'
-                car_copy['similarity_score'] = min(car_copy['similarity_score'], 84)
-                similar_tastes.append(car_copy)
-            elif demographic_bonus > 0:
-                car_copy['match_type'] = 'recommended'
-                car_copy['similarity_score'] = min(car_copy['similarity_score'], 84)
-                demographic_recs.append(car_copy)
-        
-        # Ordenar y limitar
-        filtered_results.sort(key=lambda x: x['similarity_score'], reverse=True)
-        similar_tastes.sort(key=lambda x: x['similarity_score'], reverse=True)
-        demographic_recs.sort(key=lambda x: x['similarity_score'], reverse=True)
-        
-        filtered_results = filtered_results[:6]
-        similar_tastes = similar_tastes[:6]
-        demographic_recs = demographic_recs[:6]
-        
-        # Combinar para retornar
-        all_results = filtered_results + similar_tastes + demographic_recs
-        
-        logger.info(f"✅ Generados {len(filtered_results)} filtrados + {len(similar_tastes)} gustos similares + {len(demographic_recs)} demográficas")
-        return all_results
+        return filtered_results + recommended_results
 
 # Instancia global del sistema de recomendaciones
 recommendation_system = CarRecommendationSystem()
 
 def get_recommendations(brands=None, budget=None, fuel=None, types=None, transmission=None, gender=None, age_range=None):
     """
-    Función principal de recomendaciones
-    
-    Args:
-        brands: Lista de marcas preferidas
-        budget: Presupuesto (string "min-max" o dict {"min": x, "max": y})
-        fuel: Lista de tipos de combustible
-        types: Lista de tipos de vehículo
-        transmission: Lista de tipos de transmisión
-        gender: Género del usuario ('masculino', 'femenino')
-        age_range: Rango de edad ('18-25', '26-35', '36-45', '46-55', '56+')
-    
-    Returns:
-        Lista de recomendaciones de autos
+    Función principal de recomendaciones que devuelve tanto filtrados como recomendaciones
     """
     try:
-        logger.info("🎯 INICIANDO SISTEMA DE RECOMENDACIONES")
-        logger.info("=" * 50)
-        logger.info(f"📊 Parámetros recibidos RAW:")
-        logger.info(f"  🏷️  Marcas: {brands} (tipo: {type(brands)})")
-        logger.info(f"  💰 Presupuesto: {budget} (tipo: {type(budget)})")
-        logger.info(f"  ⛽ Combustible: {fuel} (tipo: {type(fuel)})")
-        logger.info(f"  🚗 Tipos: {types} (tipo: {type(types)})")
-        logger.info(f"  ⚙️  Transmisión: {transmission} (tipo: {type(transmission)})")
-        logger.info(f"  👤 Género: {gender} (tipo: {type(gender)})")
-        logger.info(f"  🎂 Edad: {age_range} (tipo: {type(age_range)})")
+        logger.info("🎯 INICIANDO SISTEMA DE RECOMENDACIONES INTELIGENTE")
+        logger.info("=" * 60)
+        logger.info(f"📊 Entrada: brands={brands}, budget={budget}, fuel={fuel}")
+        logger.info(f"         types={types}, transmission={transmission}")
+        logger.info(f"         gender={gender}, age_range={age_range}")
         
-        # Obtener recomendaciones del sistema
-        recommendations = recommendation_system.get_recommendations_from_neo4j(
-            brands=brands,
-            budget=budget,
-            fuel=fuel,
-            types=types,
-            transmission=transmission,
-            gender=gender,
-            age_range=age_range
-        )
+        # Normalizar parámetros
+        brands = brands if isinstance(brands, list) else [brands] if brands else []
+        fuel = fuel if isinstance(fuel, list) else [fuel] if fuel else []
+        types = types if isinstance(types, list) else [types] if types else []
+        transmission = transmission if isinstance(transmission, list) else [transmission] if transmission else []
         
-        logger.info(f"✅ RECOMENDACIONES GENERADAS: {len(recommendations)}")
-        for i, car in enumerate(recommendations, 1):
-            logger.info(f"  {i}. {car['name']} - ${car['price']:,} - Score: {car['similarity_score']:.1f}")
+        if not recommendation_system.connected:
+            logger.warning("❌ Neo4j no conectado, usando datos de respaldo")
+            return recommendation_system.get_fallback_data(brands, budget, fuel, types, transmission, gender, age_range)
         
-        logger.info("=" * 50)
-        return recommendations
+        with recommendation_system.driver.session() as session:
+            # Obtener resultados filtrados (coincidencias exactas)
+            filtered_cars = recommendation_system.get_filtered_cars(
+                session, brands, budget, fuel, types, transmission, gender, age_range
+            )
+            
+            # Obtener recomendaciones inteligentes
+            recommended_cars = recommendation_system.get_smart_recommendations(
+                session, brands, budget, fuel, types, transmission, gender, age_range
+            )
+            
+            # Combinar resultados
+            all_results = filtered_cars + recommended_cars
+            
+            logger.info(f"📊 RESULTADOS FINALES:")
+            logger.info(f"  🔍 Filtrados exactos: {len(filtered_cars)}")
+            logger.info(f"  🎯 Recomendaciones inteligentes: {len(recommended_cars)}")
+            logger.info(f"  📋 Total: {len(all_results)}")
+            
+            if not all_results:
+                logger.warning("⚠️ No se encontraron resultados, usando respaldo")
+                return recommendation_system.get_fallback_data(brands, budget, fuel, types, transmission, gender, age_range)
+            
+            logger.info("=" * 60)
+            return all_results
         
     except Exception as e:
         logger.error(f"❌ ERROR EN get_recommendations: {e}")
         traceback.print_exc()
-        
-        # Retornar recomendaciones de respaldo
-        fallback = recommendation_system.get_fallback_recommendations(
-            brands, budget, fuel, types, transmission, gender, age_range
-        )
-        logger.info(f"🔄 Retornando {len(fallback)} recomendaciones de respaldo")
-        return fallback
+        return recommendation_system.get_fallback_data(brands, budget, fuel, types, transmission, gender, age_range)
 
 def test_recommendations():
-    """Función de prueba para verificar el sistema"""
-    print("🧪 PROBANDO SISTEMA DE RECOMENDACIONES")
+    """Función de prueba"""
+    print("🧪 PROBANDO SISTEMA DE RECOMENDACIONES SEPARADO")
     print("=" * 60)
     
-    # Prueba 1: Mujer joven que necesita SUV
-    print("\n👩 Prueba 1: Mujer 26-35 años, busca SUV")
-    results1 = get_recommendations(
-        brands=["Toyota", "Honda", "Mazda"],
-        budget="25000-45000",
-        fuel=["Gasolina", "Híbrido"],
+    results = get_recommendations(
+        brands=["BMW", "Toyota"],
+        budget="30000-60000",
+        fuel=["Gasolina"],
         types=["SUV"],
         transmission=["Automática"],
         gender="femenino",
         age_range="26-35"
     )
-    print(f"Resultados: {len(results1)} autos encontrados")
     
-    # Prueba 2: Hombre joven deportivo
-    print("\n👨 Prueba 2: Hombre 18-25 años, busca deportivo")
-    results2 = get_recommendations(
-        brands=["BMW", "Ford", "Chevrolet"],
-        budget="30000-60000",
-        fuel=["Gasolina"],
-        types=["Coupé", "Sedán"],
-        transmission=["Manual", "Automática"],
-        gender="masculino",
-        age_range="18-25"
-    )
-    print(f"Resultados: {len(results2)} autos encontrados")
+    filtered = [car for car in results if car['match_type'] == 'filtered']
+    recommended = [car for car in results if car['match_type'] == 'recommended']
     
-    # Prueba 3: Persona madura con presupuesto alto
-    print("\n🧓 Prueba 3: Persona 46+ años, busca lujo")
-    results3 = get_recommendations(
-        brands=["Mercedes-Benz", "BMW", "Lexus"],
-        budget="45000-80000",
-        fuel=["Gasolina", "Híbrido"],
-        types=["Sedán", "SUV"],
-        transmission=["Automática"],
-        gender="masculino",
-        age_range="46-55"
-    )
-    print(f"Resultados: {len(results3)} autos encontrados")
+    print(f"\n🔍 FILTRADOS EXACTOS ({len(filtered)}):")
+    for car in filtered:
+        print(f"  - {car['name']} - ${car['price']:,} - {car['match_reason']}")
     
-    print("\n✅ Pruebas completadas")
+    print(f"\n🎯 RECOMENDACIONES ({len(recommended)}):")
+    for car in recommended:
+        print(f"  - {car['name']} - ${car['price']:,} - {car['match_reason']}")
+    
+    print("\n✅ Prueba completada")
 
 if __name__ == "__main__":
-    # Ejecutar pruebas si se ejecuta directamente
     test_recommendations()
-    
-    # Cerrar conexión
     recommendation_system.close()
