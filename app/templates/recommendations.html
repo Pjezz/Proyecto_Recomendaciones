@@ -1,124 +1,173 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tus Recomendaciones de Autos</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/recommendations.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomendaciones de Autos - AutoRecommend</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/recommendations.css') }}">
 </head>
 <body>
-  <!-- Barra de navegación superior -->
-  <nav class="top-navbar">
-    <div class="nav-content">
-      <div class="nav-left">
-        <div class="user-menu">
-          <button class="user-menu-btn" id="user-menu-btn">
-            <span class="user-icon">👤</span>
-            <span class="user-name" id="user-name">Usuario</span>
-            <span class="dropdown-arrow">▼</span>
-          </button>
-          <div class="user-dropdown" id="user-dropdown">
-            <a href="#" onclick="openProfileModal()">👤 Ver Perfil</a>
-            <a href="#" onclick="openFavoritesModal()">❤️ Favoritos</a>
-            <a href="#" onclick="toggleTheme()">🌙 Tema Oscuro</a>
-            <hr>
-            <a href="/logout" onclick="return confirmLogout()">🚪 Cerrar Sesión</a>
-          </div>
+    <!-- Navbar consistente con el resto de la aplicación -->
+    <nav class="top-navbar">
+        <div class="nav-content">
+            <div class="nav-left">
+                <div class="user-menu">
+                    <button class="user-menu-btn" id="user-menu-btn">
+                        <span class="user-icon">👤</span>
+                        <span class="user-name" id="user-name">Usuario</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="user-dropdown" id="user-dropdown">
+                        <a href="#" onclick="openProfileModal()">👤 Ver Perfil</a>
+                        <a href="#" onclick="openFavoritesModal()">❤️ Favoritos</a>
+                        <a href="#" onclick="toggleTheme()">🌙 Tema Oscuro</a>
+                        <hr>
+                        <a href="/logout" onclick="return confirmLogout()">🚪 Cerrar Sesión</a>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-center">
+                <h2>🚗 AutoRecommend</h2>
+            </div>
+            <div class="nav-right">
+                <span class="step-indicator">Paso 7/7 - Recomendaciones</span>
+            </div>
         </div>
-      </div>
-      <div class="nav-center">
-        <h2>🎯 Tus Recomendaciones Personalizadas</h2>
-      </div>
-      <div class="nav-right">
-        <span class="step-indicator">✅ Completado</span>
-      </div>
-    </div>
-  </nav>
+    </nav>
 
-  <div class="container">
-    <header>
-      <h1>Tus Recomendaciones Personalizadas</h1>
-      <p class="subtitle">Basadas en tus preferencias y perfil demográfico</p>
-    </header>
-
-    <!-- Debug Info -->
-    <div class="debug-info">
-      <strong>Estado de Debug:</strong><br>
-      CSS: ✓ Cargado directamente<br>
-      JavaScript: <span id="js-status">⏳ Verificando...</span><br>
-      API: <span id="api-status">⏳ Verificando...</span><br>
-      Personalización: <span id="personalization-status">⏳ Verificando...</span>
-    </div>
-
-    <!-- Loading indicator -->
-    <div id="loading" class="loading" style="display: block;">
-      🔍 Analizando tus preferencias y generando recomendaciones personalizadas...
-    </div>
-
-    <!-- Error container -->
-    <div id="error-container" class="error-container" style="display: none;">
-    </div>
-
-    <!-- Summary section -->
-    <div id="summary-section" class="summary-section" style="display: none;">
-      <h3>📊 Resumen de tu búsqueda personalizada</h3>
-      <div id="summary-content"></div>
-    </div>
-
-    <!-- Recommendations container -->
-    <div id="recommendations-container" class="recommendations-container" style="display: none;">
-    </div>
-
-    <!-- Action buttons -->
-    <div class="action-buttons" id="action-buttons" style="display: none;">
-      <button onclick="restartProcess()" class="restart-btn">🔄 Empezar de Nuevo</button>
-      <button onclick="window.print()" class="print-btn">🖨️ Imprimir</button>
-      <button onclick="loadRecommendations()" class="retry-btn">🔁 Reintentar</button>
-      <button onclick="exportFavorites()" class="export-btn">📤 Exportar Favoritos</button>
-    </div>
-
-    <!-- Modal de detalles del auto -->
-    <div class="modal-overlay" id="carDetailModal">
-      <div class="modal-container">
-        <div class="modal-header">
-          <button class="modal-close" onclick="closeCarDetailsModal()">&times;</button>
-          <div class="modal-car-title" id="modalCarTitle">Detalles del Vehículo</div>
-          <div class="modal-car-subtitle" id="modalCarSubtitle">Información completa</div>
+    <div class="main-container">
+        <!-- Header de la página -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1>🎯 Tus Recomendaciones Personalizadas</h1>
+                <p class="header-subtitle">Basadas en tus preferencias y perfil demográfico</p>
+            </div>
         </div>
-        <div class="modal-body" id="modalBody">
-          <!-- Contenido se carga dinámicamente -->
+
+        <!-- Contenedor principal -->
+        <div class="content-container">
+            <!-- Filtros aplicados -->
+            <section class="filters-summary">
+                <div class="section-header">
+                    <h2>📋 Filtros Aplicados</h2>
+                    <p class="section-subtitle">Criterios utilizados para tu búsqueda</p>
+                </div>
+                <div class="filters-grid" id="filters-summary">
+                    <!-- Se llenarán dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Loading spinner -->
+            <div class="loading-container" id="loading">
+                <div class="spinner"></div>
+                <h3>Generando recomendaciones personalizadas...</h3>
+                <p>Analizando tu perfil y preferencias</p>
+            </div>
+
+            <!-- Error message -->
+            <div class="error-container" id="error-message" style="display: none;">
+                <div class="error-content">
+                    <h3>❌ Error al cargar recomendaciones</h3>
+                    <p id="error-text"></p>
+                    <button class="btn btn-primary" onclick="retryRecommendations()">🔄 Intentar de nuevo</button>
+                </div>
+            </div>
+
+            <!-- Resultados filtrados (PRIMERO) -->
+            <section class="results-section filtered-results" id="filtered-section" style="display: none;">
+                <div class="section-header">
+                    <h2>🔍 Datos Filtrados - Coincidencias Exactas</h2>
+                    <p class="section-subtitle">Autos que cumplen exactamente con TODOS tus criterios de búsqueda</p>
+                    <div class="results-badge filtered-badge">
+                        <span id="filtered-count">0</span> coincidencias exactas
+                    </div>
+                </div>
+                <div class="cars-grid" id="filtered-cars">
+                    <!-- Se llenarán dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Recomendaciones por gustos similares (SEGUNDO) -->
+            <section class="results-section similar-tastes" id="similar-tastes-section" style="display: none;">
+                <div class="section-header">
+                    <h2>🎯 Recomendaciones por Gustos Similares</h2>
+                    <p class="section-subtitle">Marcas similares a tus selecciones (alemanas, japonesas, etc.)</p>
+                    <div class="results-badge similar-badge">
+                        <span id="similar-count">0</span> recomendaciones por gustos
+                    </div>
+                </div>
+                <div class="cars-grid" id="similar-cars">
+                    <!-- Se llenarán dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Recomendaciones demográficas (TERCERO) -->
+            <section class="results-section demographic-recommendations" id="demographic-section" style="display: none;">
+                <div class="section-header">
+                    <h2>👤 Recomendaciones Demográficas</h2>
+                    <p class="section-subtitle">Autos recomendados específicamente para tu perfil demográfico</p>
+                    <div class="results-badge demographic-badge">
+                        <span id="demographic-count">0</span> recomendaciones demográficas
+                    </div>
+                </div>
+                <div class="cars-grid" id="demographic-cars">
+                    <!-- Se llenarán dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Navegación -->
+            <div class="navigation-section">
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="goBack()">
+                        ← Cambiar Filtros
+                    </button>
+                    <button class="btn btn-primary" onclick="openFavoritesModal()">
+                        ❤️ Ver Favoritos
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
-  <!-- Modales para perfil y favoritos -->
-  <div class="modal-overlay" id="profile-modal">
-    <div class="modal-container">
-      <div class="modal-header">
-        <h3>Mi Perfil</h3>
-        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
-      </div>
-      <div class="modal-body" id="profile-modal-body">
-        <!-- Contenido se carga dinámicamente -->
-      </div>
+    <!-- Modales -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>👤 Mi Perfil</h3>
+                <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="profile-modal-body">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="modal-overlay" id="favorites-modal">
-    <div class="modal-container">
-      <div class="modal-header">
-        <h3>Mis Favoritos</h3>
-        <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
-      </div>
-      <div class="modal-body" id="favorites-modal-body">
-        <p>Cargando favoritos...</p>
-      </div>
+    <div class="modal-overlay" id="favorites-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>❤️ Mis Favoritos</h3>
+                <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="favorites-modal-body">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/recommendations.js') }}"></script>
+    <div class="modal-overlay" id="car-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>🚗 Detalles del Vehículo</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-car-details">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/recommendations.js') }}"></script>
 </body>
 </html>

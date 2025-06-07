@@ -377,7 +377,7 @@ def save_transmission():
 def api_recommendations():
     try:
         print("\n" + "="*60)
-        print("🎯 API RECOMMENDATIONS - INICIANDO")
+        print("🎯 API RECOMMENDATIONS - INICIANDO (FILTRADOS + RECOMENDACIONES)")
         print("="*60)
         
         # Obtener datos de la sesión
@@ -430,35 +430,49 @@ def api_recommendations():
         print(f"  Género: {gender}")
         print(f"  Edad: {age_range}")
         
-        # Si el sistema de recomendaciones no está disponible, usar datos de ejemplo
+        # Obtener recomendaciones completas
         if not RECOMMENDER_AVAILABLE:
             print("⚠️ RECOMMENDER NO DISPONIBLE - Usando datos de ejemplo")
-            sample_recommendations = get_sample_recommendations()
+            all_recommendations = get_sample_recommendations()
         else:
             print("🔍 Llamando a get_recommendations...")
-            # Usar el sistema de recomendaciones real con personalización demográfica
-            result = get_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
+            all_recommendations = get_recommendations(brands, budget, fuel, types, transmission, gender, age_range)
             
             print(f"📋 Resultado recibido:")
-            print(f"  Tipo: {type(result)}")
-            print(f"  Cantidad: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"  Tipo: {type(all_recommendations)}")
+            print(f"  Cantidad: {len(all_recommendations) if isinstance(all_recommendations, list) else 'N/A'}")
             
-            # Asegurar que el resultado sea una lista
-            if not isinstance(result, list):
-                print(f"⚠️ get_recommendations devolvió {type(result)}, esperaba lista")
-                sample_recommendations = get_sample_recommendations()
-            else:
-                sample_recommendations = result
+            if not isinstance(all_recommendations, list):
+                print(f"⚠️ get_recommendations devolvió {type(all_recommendations)}, esperaba lista")
+                all_recommendations = get_sample_recommendations()
         
         # Aplicar personalización demográfica adicional si no se hizo en recommender
-        if gender and age_range and not any('demographic_bonus' in car for car in sample_recommendations):
-            sample_recommendations = apply_demographic_scoring(sample_recommendations, gender, age_range)
+        if gender and age_range and not any('demographic_bonus' in car for car in all_recommendations):
+            all_recommendations = apply_demographic_scoring(all_recommendations, gender, age_range)
             print(f"🎯 Personalización adicional aplicada por género: {gender}, edad: {age_range}")
         
-        print(f"🎉 ÉXITO: Devolviendo {len(sample_recommendations)} recomendaciones")
+        # Los resultados ya vienen separados del recommender_minimal.py
+        # Solo necesitamos verificar que tengan el campo match_type
+        for car in all_recommendations:
+            if 'match_type' not in car:
+                # Si no tiene match_type, asignar basado en score
+                if car.get('similarity_score', 0) >= 85:
+                    car['match_type'] = 'filtered'
+                else:
+                    car['match_type'] = 'recommended'
+        
+        # Contar por tipo
+        filtered_count = len([car for car in all_recommendations if car.get('match_type') == 'filtered'])
+        recommended_count = len([car for car in all_recommendations if car.get('match_type') == 'recommended'])
+        
+        print(f"📊 RESULTADOS PROCESADOS:")
+        print(f"  🔍 Filtrados exactos: {filtered_count}")
+        print(f"  🎯 Recomendaciones inteligentes: {recommended_count}")
+        
+        print(f"🎉 ÉXITO: Devolviendo {len(all_recommendations)} resultados totales")
         print("="*60)
         
-        return jsonify(sample_recommendations)
+        return jsonify(all_recommendations)
         
     except Exception as e:
         # Log completo del error
@@ -472,10 +486,11 @@ def api_recommendations():
         }), 500
 
 def get_sample_recommendations():
-    """Obtener recomendaciones de ejemplo"""
-    return [
+    """Obtener recomendaciones de ejemplo con separación de tipos"""
+    sample_data = [
+        # Resultados filtrados (score alto, coincidencia exacta)
         {
-            "id": "sample_1",
+            "id": "sample_filtered_1",
             "name": "Toyota Corolla 2024",
             "model": "Corolla",
             "brand": "Toyota",
@@ -485,11 +500,12 @@ def get_sample_recommendations():
             "fuel": "Gasolina",
             "transmission": "Automática",
             "features": ["Aire acondicionado", "Radio AM/FM", "Bluetooth", "Cámara trasera", "Seguridad Toyota Safety"],
-            "similarity_score": 85.0,
+            "similarity_score": 92.0,
+            "match_type": "filtered",
             "image": None
         },
         {
-            "id": "sample_2",
+            "id": "sample_filtered_2",
             "name": "Honda CR-V 2024",
             "model": "CR-V",
             "brand": "Honda",
@@ -499,67 +515,12 @@ def get_sample_recommendations():
             "fuel": "Gasolina",
             "transmission": "Automática",
             "features": ["Espacio familiar", "Asientos cómodos", "Honda Sensing", "Amplio maletero"],
-            "similarity_score": 80.0,
+            "similarity_score": 90.0,
+            "match_type": "filtered",
             "image": None
         },
         {
-            "id": "sample_3",
-            "name": "BMW M3 2024",
-            "model": "M3",
-            "brand": "BMW",
-            "year": 2024,
-            "price": 75000,
-            "type": "Coupé",
-            "fuel": "Gasolina",
-            "transmission": "Manual",
-            "features": ["Motor turbo", "Deportivo", "Asientos sport", "Performance premium"],
-            "similarity_score": 75.0,
-            "image": None
-        },
-        {
-            "id": "sample_4",
-            "name": "Mercedes-Benz S-Class 2024",
-            "model": "S-Class",
-            "brand": "Mercedes-Benz",
-            "year": 2024,
-            "price": 95000,
-            "type": "Sedán",
-            "fuel": "Gasolina",
-            "transmission": "Automática",
-            "features": ["Asientos de cuero premium", "Lujo alemán", "Tecnología avanzada", "Confort superior"],
-            "similarity_score": 70.0,
-            "image": None
-        },
-        {
-            "id": "sample_5",
-            "name": "Tesla Model Y 2024",
-            "model": "Model Y",
-            "brand": "Tesla",
-            "year": 2024,
-            "price": 55000,
-            "type": "SUV",
-            "fuel": "Eléctrico",
-            "transmission": "Automática",
-            "features": ["Piloto automático", "Pantalla táctil", "Carga rápida", "Tecnología verde"],
-            "similarity_score": 68.0,
-            "image": None
-        },
-        {
-            "id": "sample_6",
-            "name": "Audi A4 2024",
-            "model": "A4",
-            "brand": "Audi",
-            "year": 2024,
-            "price": 42000,
-            "type": "Sedán",
-            "fuel": "Gasolina",
-            "transmission": "Automática",
-            "features": ["Quattro AWD", "Virtual cockpit", "Premium sound"],
-            "similarity_score": 65.0,
-            "image": None
-        },
-        {
-            "id": "sample_7",
+            "id": "sample_filtered_3",
             "name": "Mazda CX-5 2024",
             "model": "CX-5",
             "brand": "Mazda",
@@ -569,11 +530,59 @@ def get_sample_recommendations():
             "fuel": "Gasolina",
             "transmission": "Automática",
             "features": ["Diseño premium", "Tecnología i-ACTIVSENSE", "Interior espacioso"],
-            "similarity_score": 62.0,
+            "similarity_score": 88.0,
+            "match_type": "filtered",
+            "image": None
+        },
+        
+        # Recomendaciones inteligentes (score menor, sugerencias basadas en IA)
+        {
+            "id": "sample_recommended_1",
+            "name": "BMW 3 Series 2024",
+            "model": "3 Series",
+            "brand": "BMW",
+            "year": 2024,
+            "price": 45000,
+            "type": "Sedán",
+            "fuel": "Gasolina",
+            "transmission": "Automática",
+            "features": ["Motor turbo", "Deportivo", "Asientos sport", "Performance premium"],
+            "similarity_score": 78.0,
+            "match_type": "recommended",
             "image": None
         },
         {
-            "id": "sample_8",
+            "id": "sample_recommended_2",
+            "name": "Tesla Model Y 2024",
+            "model": "Model Y",
+            "brand": "Tesla",
+            "year": 2024,
+            "price": 55000,
+            "type": "SUV",
+            "fuel": "Eléctrico",
+            "transmission": "Automática",
+            "features": ["Piloto automático", "Pantalla táctil", "Carga rápida", "Tecnología verde"],
+            "similarity_score": 75.0,
+            "match_type": "recommended",
+            "image": None
+        },
+        {
+            "id": "sample_recommended_3",
+            "name": "Mercedes-Benz C-Class 2024",
+            "model": "C-Class",
+            "brand": "Mercedes-Benz",
+            "year": 2024,
+            "price": 48000,
+            "type": "Sedán",
+            "fuel": "Gasolina",
+            "transmission": "Automática",
+            "features": ["Lujo alemán", "Asientos de cuero premium", "Tecnología avanzada", "Confort superior"],
+            "similarity_score": 72.0,
+            "match_type": "recommended",
+            "image": None
+        },
+        {
+            "id": "sample_recommended_4",
             "name": "Ford Mustang GT 2024",
             "model": "Mustang GT",
             "brand": "Ford",
@@ -583,10 +592,28 @@ def get_sample_recommendations():
             "fuel": "Gasolina",
             "transmission": "Manual",
             "features": ["Motor V8", "Deportivo", "Diseño icónico", "Performance sport"],
-            "similarity_score": 60.0,
+            "similarity_score": 70.0,
+            "match_type": "recommended",
+            "image": None
+        },
+        {
+            "id": "sample_recommended_5",
+            "name": "Audi A4 2024",
+            "model": "A4",
+            "brand": "Audi",
+            "year": 2024,
+            "price": 42000,
+            "type": "Sedán",
+            "fuel": "Gasolina",
+            "transmission": "Automática",
+            "features": ["Quattro AWD", "Virtual cockpit", "Premium sound"],
+            "similarity_score": 68.0,
+            "match_type": "recommended",
             "image": None
         }
     ]
+    
+    return sample_data
 
 def apply_demographic_scoring(recommendations, gender, age_range):
     """Aplicar puntuación demográfica según género y edad"""
@@ -694,7 +721,8 @@ def system_status():
         "users_count": len(USERS_DB),
         "profiles_count": len(USER_PROFILES),
         "favorites_count": sum(len(favs) for favs in USER_FAVORITES.values()),
-        "demographic_features": "✅ Activas"
+        "demographic_features": "✅ Activas",
+        "filtered_and_recommended_separation": "✅ Implementado"
     }
     
     if RECOMMENDER_AVAILABLE:
@@ -703,6 +731,9 @@ def system_status():
             test_result = get_recommendations(
                 brands=["Toyota"], 
                 budget="20000-50000",
+                fuel=["Gasolina"],
+                types=["Sedán"],
+                transmission=["Automática"],
                 gender="femenino",
                 age_range="26-35"
             )
@@ -728,9 +759,33 @@ def not_found(error):
 def internal_error(error):
     return jsonify({"error": "Error interno del servidor"}), 500
 
+@app.route("/api/debug/check-session", methods=["GET"])
+def check_session():
+    return jsonify({
+        "session_data": dict(session),
+        "selected_brands": session.get('selected_brands'),
+        "selected_budget": session.get('selected_budget'),
+        "selected_fuel": session.get('selected_fuel'),
+        "selected_types": session.get('selected_types'),
+        "selected_transmission": session.get('selected_transmission'),
+        "user_email": session.get('user_email'),
+        "logged_in": session.get('logged_in')
+    })
+
+@app.route("/api/clear-favorites", methods=["POST"])
+def clear_favorites():
+    if not session.get('logged_in'):
+        return jsonify({"success": False, "error": "No autenticado"}), 401
+    
+    user_email = session.get('user_email')
+    if user_email in USER_FAVORITES:
+        USER_FAVORITES[user_email] = []
+    
+    return jsonify({"success": True})
+
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 INICIANDO APLICACIÓN FLASK CON PERSONALIZACIÓN DEMOGRÁFICA")
+    print("🚀 INICIANDO APLICACIÓN FLASK CON FILTRADOS Y RECOMENDACIONES")
     print("=" * 60)
     print(f"✅ Recommender disponible: {RECOMMENDER_AVAILABLE}")
     print("📋 Endpoints principales:")
@@ -748,10 +803,15 @@ if __name__ == "__main__":
     print("  ❤️  POST /api/add-favorite -> agregar favorito")
     print("  🎨 POST /api/save-theme -> guardar tema preferido")
     print("  🔍 GET  /api/debug/system-status -> estado del sistema")
-    print("\n🎯 FUNCIONALIDADES DEMOGRÁFICAS:")
+    print("\n🎯 FUNCIONALIDADES AVANZADAS:")
+    print("  🔍 Resultados Filtrados: Coincidencias exactas con criterios (Score 85-100)")
+    print("  🎯 Recomendaciones IA: Sugerencias inteligentes personalizadas (Score 50-84)")
     print("  👩 Mujeres jóvenes (18-25): Deportivos permitidos")
     print("  👩‍👧‍👦 Mujeres reproductivas (26-45): +15 SUVs, +10 sedanes familiares")
     print("  👨 Hombres jóvenes (18-25): +8 deportivos")
     print("  🧓 Personas maduras (46+): +12 marcas premium, +8 comfort")
+    print("  📱 Interfaz moderna con separación clara de resultados")
+    print("  ❤️  Sistema de favoritos integrado")
+    print("  🎨 Notificaciones en tiempo real")
     print("=" * 60)
     app.run(debug=True, port=5000)
