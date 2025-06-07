@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Sistema de recomendaciones inteligente para autos con separación clara entre filtrados y recomendaciones
+MEJORADO: Más resultados filtrados y recomendaciones
 """
 
 from neo4j import GraphDatabase
@@ -99,20 +100,30 @@ class CarRecommendationSystem:
                 params['max_price'] = int(max_price)
             
             if fuel and len(fuel) > 0:
-                conditions.append("c.tipo IN $fuel")
-                params['fuel'] = fuel
+                # Manejar si fuel es string o list
+                if isinstance(fuel, str):
+                    conditions.append("c.tipo = $fuel")
+                    params['fuel'] = fuel
+                else:
+                    conditions.append("c.tipo IN $fuel")
+                    params['fuel'] = fuel
             
             if types and len(types) > 0:
                 conditions.append("t.categoria IN $types")
                 params['types'] = types
             
             if transmission and len(transmission) > 0:
-                conditions.append("tr.tipo IN $transmission")
-                params['transmission'] = transmission
+                # Manejar si transmission es string o list
+                if isinstance(transmission, str):
+                    conditions.append("tr.tipo = $transmission")
+                    params['transmission'] = transmission
+                else:
+                    conditions.append("tr.tipo IN $transmission")
+                    params['transmission'] = transmission
             
-            # Si no hay condiciones suficientes, no retornar nada
-            if len(conditions) < 3:  # Al menos 3 filtros deben estar presentes
-                logger.info("⚠️ Insuficientes filtros para resultados exactos")
+            # CAMBIO: Reducir el requisito mínimo de filtros de 3 a 2
+            if len(conditions) < 2:
+                logger.info("⚠️ Insuficientes filtros para resultados exactos (mínimo 2)")
                 return []
             
             where_clause = "WHERE " + " AND ".join(conditions)
@@ -125,8 +136,8 @@ class CarRecommendationSystem:
             {where_clause}
             
             WITH a, m, t, c, tr,
-                 90 + (m.reliability * 2) + 
-                 (CASE WHEN a.trim_level = 'Premium' THEN 5 ELSE 0 END) +
+                 90 + (CASE WHEN m.nombre IN $brands THEN 5 ELSE 0 END) + 
+                 (CASE WHEN a.precio <= $max_price * 0.9 THEN 3 ELSE 0 END) +
                  (CASE 
                      WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] AND t.categoria = 'SUV' THEN 8
                      WHEN $gender = 'masculino' AND $age_range = '18-25' AND t.categoria IN ['Coupé', 'Convertible'] THEN 8
@@ -148,11 +159,14 @@ class CarRecommendationSystem:
                 filtered_score as similarity_score
             
             ORDER BY filtered_score DESC, a.precio ASC
-            LIMIT 8
+            LIMIT 15
             """
             
-            params['gender'] = gender
-            params['age_range'] = age_range
+            params['gender'] = gender or ''
+            params['age_range'] = age_range or ''
+            # Asegurar que max_price existe para el cálculo
+            if 'max_price' not in params:
+                params['max_price'] = 999999
             
             logger.info(f"🔍 Ejecutando consulta de filtros exactos")
             logger.info(f"📋 Condiciones: {len(conditions)} filtros aplicados")
@@ -193,9 +207,16 @@ class CarRecommendationSystem:
             # Obtener marcas recomendadas basadas en patrones
             recommended_brands = self.get_brand_patterns(brands)
             
-            if not recommended_brands:
-                logger.info("⚠️ No se detectaron patrones para recomendaciones")
-                return []
+            # CAMBIO: Siempre incluir algunas marcas populares para asegurar resultados
+            popular_brands = ['Toyota', 'Honda', 'Ford', 'BMW', 'Mercedes-Benz', 'Audi', 'Tesla', 'Nissan']
+            all_recommended_brands = list(set(recommended_brands + popular_brands))
+            
+            # Remover marcas ya seleccionadas por el usuario
+            all_recommended_brands = [b for b in all_recommended_brands if b not in (brands or [])]
+            
+            if not all_recommended_brands:
+                logger.info("⚠️ No se detectaron patrones, usando marcas populares")
+                all_recommended_brands = popular_brands
             
             # Construir consulta más flexible para recomendaciones
             cypher_query = """
@@ -206,45 +227,54 @@ class CarRecommendationSystem:
             
             WHERE m.nombre IN $recommended_brands
             AND (
-                // Respetar presupuesto si está definido
-                ($min_price IS NULL OR a.precio >= $min_price) AND
-                ($max_price IS NULL OR a.precio <= $max_price * 1.3)  // 30% más flexible en precio
+                // Respetar presupuesto si está definido (más flexible)
+                ($min_price IS NULL OR a.precio >= $min_price * 0.7) AND
+                ($max_price IS NULL OR a.precio <= $max_price * 1.5)  // 50% más flexible en precio
             )
             AND (
-                // Preferir tipos seleccionados pero ser flexible
+                // Ser más flexible con tipos y combustibles
                 $types IS NULL OR SIZE($types) = 0 OR 
                 t.categoria IN $types OR 
                 (t.categoria = 'SUV' AND 'Crossover' IN $types) OR
-                (t.categoria = 'Crossover' AND 'SUV' IN $types)
+                (t.categoria = 'Crossover' AND 'SUV' IN $types) OR
+                (t.categoria = 'Sedán' AND 'Hatchback' IN $types) OR
+                (t.categoria = 'Hatchback' AND 'Sedán' IN $types)
+            )
+            AND (
+                // Ser más flexible con combustible
+                $fuel_filter IS NULL OR
+                c.tipo = $fuel_filter OR
+                (c.tipo = 'Híbrido' AND $fuel_filter = 'Gasolina') OR
+                (c.tipo = 'Gasolina' AND $fuel_filter = 'Híbrido')
             )
             
             WITH a, m, t, c, tr,
                  // Calcular score de recomendación
-                 60 + (m.reliability * 3) +
-                 (CASE m.price_range
-                     WHEN 'económico' THEN 5
-                     WHEN 'medio-bajo' THEN 8
-                     WHEN 'medio' THEN 12
-                     WHEN 'medio-alto' THEN 15
-                     WHEN 'alto' THEN 18
-                     ELSE 8
-                 END) +
+                 50 + 
+                 // Bonificación por marca en patrones detectados
+                 (CASE WHEN m.nombre IN $pattern_brands THEN 15 ELSE 5 END) +
                  
-                 // Bonificación por compatibilidad con gustos
+                 // Bonificación por rango de precio
                  (CASE 
-                     WHEN m.nombre IN ['BMW', 'Mercedes-Benz', 'Audi'] AND $selected_luxury = true THEN 15
-                     WHEN m.nombre IN ['Toyota', 'Honda', 'Mazda'] AND $selected_reliable = true THEN 12
-                     WHEN m.nombre IN ['Ford', 'Chevrolet'] AND $selected_american = true THEN 10
+                     WHEN a.precio >= 15000 AND a.precio <= 30000 THEN 8  // Económico
+                     WHEN a.precio >= 30000 AND a.precio <= 50000 THEN 12 // Medio
+                     WHEN a.precio >= 50000 AND a.precio <= 80000 THEN 10 // Premium
+                     WHEN a.precio >= 80000 THEN 8                       // Lujo
                      ELSE 5
                  END) +
                  
                  // Personalización demográfica
                  (CASE 
-                     WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] AND t.categoria = 'SUV' THEN 12
-                     WHEN $gender = 'masculino' AND $age_range = '18-25' AND t.categoria IN ['Coupé', 'Convertible'] THEN 10
-                     WHEN $age_range IN ['46-55', '56+'] AND m.nombre IN ['Mercedes-Benz', 'BMW', 'Audi', 'Lexus'] THEN 15
+                     WHEN $gender = 'femenino' AND $age_range IN ['26-35', '36-45'] AND t.categoria = 'SUV' THEN 15
+                     WHEN $gender = 'masculino' AND $age_range = '18-25' AND t.categoria IN ['Coupé', 'Convertible'] THEN 12
+                     WHEN $age_range IN ['46-55', '56+'] AND m.nombre IN ['Mercedes-Benz', 'BMW', 'Audi', 'Lexus'] THEN 18
+                     WHEN t.categoria = 'SUV' THEN 5  // SUVs son populares en general
+                     WHEN c.tipo = 'Híbrido' THEN 5   // Híbridos son atractivos
                      ELSE 3
-                 END) as recommendation_score
+                 END) +
+                 
+                 // Bonificación aleatoria para diversidad
+                 (rand() * 5) as recommendation_score
             
             RETURN 
                 a.id as id,
@@ -260,23 +290,17 @@ class CarRecommendationSystem:
                 recommendation_score as similarity_score
             
             ORDER BY recommendation_score DESC, a.precio ASC
-            LIMIT 10
+            LIMIT 20
             """
-            
-            # Detectar patrones para mejorar recomendaciones
-            selected_luxury = any(brand in ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus'] for brand in brands)
-            selected_reliable = any(brand in ['Toyota', 'Honda', 'Mazda'] for brand in brands)
-            selected_american = any(brand in ['Ford', 'Chevrolet'] for brand in brands)
             
             # Preparar parámetros
             params = {
-                'recommended_brands': recommended_brands[:15],  # Limitar para performance
+                'recommended_brands': all_recommended_brands[:20],  # Incluir más marcas
+                'pattern_brands': recommended_brands[:10] if recommended_brands else [],
                 'types': types if types else [],
-                'gender': gender,
-                'age_range': age_range,
-                'selected_luxury': selected_luxury,
-                'selected_reliable': selected_reliable,
-                'selected_american': selected_american,
+                'gender': gender or '',
+                'age_range': age_range or '',
+                'fuel_filter': fuel[0] if isinstance(fuel, list) and fuel else (fuel if isinstance(fuel, str) else None),
                 'min_price': None,
                 'max_price': None
             }
@@ -287,8 +311,7 @@ class CarRecommendationSystem:
                 params['min_price'] = int(min_price)
                 params['max_price'] = int(max_price)
             
-            logger.info(f"🎯 Ejecutando recomendaciones con {len(recommended_brands)} marcas sugeridas")
-            logger.info(f"📊 Patrones detectados: Lujo={selected_luxury}, Confiable={selected_reliable}, Americano={selected_american}")
+            logger.info(f"🎯 Ejecutando recomendaciones con {len(all_recommended_brands)} marcas sugeridas")
             
             result = session.run(cypher_query, params)
             
@@ -329,17 +352,18 @@ class CarRecommendationSystem:
         reasons = []
         
         # Analizar patrones de marca
-        if any(selected_brand in ['BMW', 'Mercedes-Benz', 'Audi'] for selected_brand in selected_brands):
-            if brand in ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus', 'Genesis']:
-                reasons.append(f"{brand} es similar a tus marcas premium seleccionadas")
-        
-        if any(selected_brand in ['Toyota', 'Honda', 'Mazda'] for selected_brand in selected_brands):
-            if brand in ['Toyota', 'Honda', 'Mazda', 'Nissan', 'Subaru']:
-                reasons.append(f"{brand} comparte la confiabilidad japonesa que prefieres")
-        
-        if any(selected_brand in ['Ford', 'Chevrolet'] for selected_brand in selected_brands):
-            if brand in ['Ford', 'Chevrolet', 'Dodge']:
-                reasons.append(f"{brand} mantiene el espíritu americano de tus selecciones")
+        if selected_brands:
+            if any(selected_brand in ['BMW', 'Mercedes-Benz', 'Audi'] for selected_brand in selected_brands):
+                if brand in ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus', 'Genesis']:
+                    reasons.append(f"{brand} es similar a tus marcas premium seleccionadas")
+            
+            if any(selected_brand in ['Toyota', 'Honda', 'Mazda'] for selected_brand in selected_brands):
+                if brand in ['Toyota', 'Honda', 'Mazda', 'Nissan', 'Subaru']:
+                    reasons.append(f"{brand} comparte la confiabilidad japonesa que prefieres")
+            
+            if any(selected_brand in ['Ford', 'Chevrolet'] for selected_brand in selected_brands):
+                if brand in ['Ford', 'Chevrolet', 'Dodge']:
+                    reasons.append(f"{brand} mantiene el espíritu americano de tus selecciones")
         
         # Razones demográficas
         if gender == 'femenino' and age_range in ['26-35', '36-45']:
@@ -348,6 +372,21 @@ class CarRecommendationSystem:
             reasons.append("Perfecto para tu estilo dinámico")
         elif age_range in ['46-55', '56+']:
             reasons.append("Enfocado en confort y prestigio")
+        
+        # Razones generales de marca
+        brand_reasons = {
+            'Toyota': 'Reconocida por su confiabilidad y bajo costo de mantenimiento',
+            'Honda': 'Excelente relación calidad-precio y durabilidad comprobada',
+            'BMW': 'Lujo alemán con tecnología de vanguardia',
+            'Mercedes-Benz': 'Símbolo de elegancia y prestaciones premium',
+            'Tesla': 'Innovación en movilidad eléctrica y tecnología autónoma',
+            'Ford': 'Tradición americana con gran versatilidad',
+            'Audi': 'Diseño sofisticado y tecnología quattro',
+            'Nissan': 'Innovación japonesa accesible'
+        }
+        
+        if brand in brand_reasons:
+            reasons.append(brand_reasons[brand])
         
         if not reasons:
             reasons.append("Recomendado por tu patrón de preferencias")
@@ -358,74 +397,112 @@ class CarRecommendationSystem:
         """Datos de respaldo cuando Neo4j no está disponible"""
         logger.info("🔄 Generando datos de respaldo con separación filtrados/recomendaciones")
         
-        # Simular datos filtrados (coincidencias exactas)
+        # Simular datos filtrados (coincidencias exactas) - MÁS CANTIDAD
         filtered_results = []
         if brands:
             for i, brand in enumerate(brands[:3]):  # Máximo 3 marcas
+                # Generar 2-3 autos por marca para tener más variedad
+                models = ['Premium', 'Sport', 'Luxury'][:2+i]
+                for j, model in enumerate(models):
+                    car = {
+                        'id': f'filtered_{brand.lower()}_{i}_{j}',
+                        'name': f'{brand} {model} 2024',
+                        'model': model,
+                        'brand': brand,
+                        'year': 2024,
+                        'price': 35000 + (i * 5000) + (j * 3000),
+                        'type': types[0] if types else 'SUV',
+                        'fuel': fuel[0] if fuel else 'Gasolina',
+                        'transmission': transmission[0] if transmission else 'Automática',
+                        'features': ['Premium Package', 'Safety Tech', 'Comfort Features', f'Feature {j+1}'],
+                        'segment': 'premium',
+                        'similarity_score': 92.0 - (i * 2) - (j * 1),
+                        'match_type': 'filtered',
+                        'match_reason': 'Coincide exactamente con todos tus filtros',
+                        'image': None
+                    }
+                    filtered_results.append(car)
+        
+        # Si no hay marcas seleccionadas, crear algunos filtrados genéricos
+        if not filtered_results:
+            generic_brands = ['Toyota', 'Honda', 'Ford']
+            for i, brand in enumerate(generic_brands):
                 car = {
-                    'id': f'filtered_{brand.lower()}_{i}',
-                    'name': f'{brand} Premium 2024',
-                    'model': 'Premium',
+                    'id': f'filtered_generic_{i}',
+                    'name': f'{brand} Popular 2024',
+                    'model': 'Popular',
                     'brand': brand,
                     'year': 2024,
-                    'price': 35000 + (i * 5000),
-                    'type': types[0] if types else 'SUV',
+                    'price': 30000 + (i * 5000),
+                    'type': types[0] if types else 'Sedán',
                     'fuel': fuel[0] if fuel else 'Gasolina',
                     'transmission': transmission[0] if transmission else 'Automática',
-                    'features': ['Premium Package', 'Safety Tech', 'Comfort Features'],
-                    'segment': 'premium',
-                    'similarity_score': 92.0 - (i * 2),
+                    'features': ['Standard Package', 'Basic Safety', 'Essential Features'],
+                    'segment': 'standard',
+                    'similarity_score': 90.0 - (i * 3),
                     'match_type': 'filtered',
-                    'match_reason': 'Coincide exactamente con todos tus filtros',
+                    'match_reason': 'Coincide con tus filtros principales',
                     'image': None
                 }
                 filtered_results.append(car)
         
-        # Simular recomendaciones inteligentes
+        # Simular recomendaciones inteligentes - MÁS CANTIDAD
         recommended_results = []
         
         # Patrones de recomendación basados en marcas seleccionadas
         recommendation_patterns = {
-            'BMW': ['Mercedes-Benz', 'Audi', 'Lexus'],
-            'Mercedes-Benz': ['BMW', 'Audi', 'Genesis'],
-            'Audi': ['BMW', 'Mercedes-Benz', 'Lexus'],
-            'Toyota': ['Honda', 'Mazda', 'Subaru'],
-            'Honda': ['Toyota', 'Mazda', 'Nissan'],
-            'Ford': ['Chevrolet', 'Jeep'],
-            'Chevrolet': ['Ford', 'Dodge']
+            'BMW': ['Mercedes-Benz', 'Audi', 'Lexus', 'Genesis'],
+            'Mercedes-Benz': ['BMW', 'Audi', 'Genesis', 'Lexus'],
+            'Audi': ['BMW', 'Mercedes-Benz', 'Lexus', 'Genesis'],
+            'Toyota': ['Honda', 'Mazda', 'Subaru', 'Nissan'],
+            'Honda': ['Toyota', 'Mazda', 'Nissan', 'Subaru'],
+            'Ford': ['Chevrolet', 'Jeep', 'Dodge'],
+            'Chevrolet': ['Ford', 'Dodge', 'Jeep'],
+            'Tesla': ['BMW', 'Mercedes-Benz', 'Audi'],  # Marcas que también innovan
         }
         
+        # Recomendaciones basadas en marcas seleccionadas
         recommended_brands = set()
-        for brand in brands:
+        for brand in (brands or []):
             if brand in recommendation_patterns:
                 recommended_brands.update(recommendation_patterns[brand])
         
-        recommended_brands = list(recommended_brands)[:4]  # Máximo 4 recomendaciones
+        # Si no hay marcas seleccionadas, usar marcas populares
+        if not recommended_brands:
+            recommended_brands = {'Honda', 'Toyota', 'BMW', 'Mercedes-Benz', 'Audi', 'Tesla'}
         
+        recommended_brands = list(recommended_brands)[:8]  # Máximo 8 marcas recomendadas
+        
+        # Generar múltiples modelos por marca recomendada
         for i, brand in enumerate(recommended_brands):
-            reason = f"{brand} es similar a tus marcas preferidas"
-            if gender == 'femenino' and age_range in ['26-35', '36-45']:
-                reason += " y es ideal para uso familiar"
-            
-            car = {
-                'id': f'recommended_{brand.lower()}_{i}',
-                'name': f'{brand} Sport 2024',
-                'model': 'Sport',
-                'brand': brand,
-                'year': 2024,
-                'price': 32000 + (i * 6000),
-                'type': types[0] if types else 'SUV',
-                'fuel': fuel[0] if fuel else 'Gasolina', 
-                'transmission': transmission[0] if transmission else 'Automática',
-                'features': ['Advanced Tech', 'Sport Package', 'Premium Interior'],
-                'segment': 'sport',
-                'similarity_score': 78.0 - (i * 3),
-                'match_type': 'recommended',
-                'match_reason': reason,
-                'image': None
-            }
-            recommended_results.append(car)
+            models = ['Sport', 'Elegant', 'Performance'][:2]  # 2 modelos por marca
+            for j, model in enumerate(models):
+                reason = f"{brand} es similar a tus marcas preferidas"
+                if gender == 'femenino' and age_range in ['26-35', '36-45']:
+                    reason += " y es ideal para uso familiar"
+                elif gender == 'masculino' and age_range == '18-25':
+                    reason += " y ofrece gran performance"
+                
+                car = {
+                    'id': f'recommended_{brand.lower()}_{i}_{j}',
+                    'name': f'{brand} {model} 2024',
+                    'model': model,
+                    'brand': brand,
+                    'year': 2024,
+                    'price': 32000 + (i * 6000) + (j * 2000),
+                    'type': types[0] if types else 'SUV',
+                    'fuel': fuel[0] if fuel else 'Gasolina', 
+                    'transmission': transmission[0] if transmission else 'Automática',
+                    'features': ['Advanced Tech', f'{model} Package', 'Premium Interior', f'Exclusive {j+1}'],
+                    'segment': 'recommended',
+                    'similarity_score': 78.0 - (i * 2) - (j * 1),
+                    'match_type': 'recommended',
+                    'match_reason': reason,
+                    'image': None
+                }
+                recommended_results.append(car)
         
+        logger.info(f"🔄 Generados {len(filtered_results)} filtrados y {len(recommended_results)} recomendaciones de respaldo")
         return filtered_results + recommended_results
 
 # Instancia global del sistema de recomendaciones
